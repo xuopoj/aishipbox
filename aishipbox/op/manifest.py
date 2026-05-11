@@ -92,11 +92,11 @@ def parse_manifest(text: str) -> Manifest:
     rt = doc.get("runtime", {})
     res = (rt.get("resources") or [{}])[0]
     return Manifest(
-        id=doc.get("id", ""),
-        name=doc.get("name", ""),
-        description=doc.get("description", ""),
-        author=doc.get("author", ""),
-        version=doc.get("version", ""),
+        id=str(doc.get("id", "")),
+        name=str(doc.get("name", "")),
+        description=str(doc.get("description", "")),
+        author=str(doc.get("author", "")),
+        version=str(doc.get("version", "")),
         category=list(tags.get("category", [])),
         modal=list(tags.get("modal", [])),
         format=list(tags.get("format", [])),
