@@ -1,0 +1,1 @@
+"""algo-cli templates."""

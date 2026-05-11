@@ -1,0 +1,13 @@
+# 在此添加基础镜像中未包含的依赖
+# 将 .whl 文件放入 dependency/ 文件夹，并按以下格式引用：
+#   dependency/your-package-1.0.0-py3-none-any.whl
+#
+# 基础镜像已安装的包（请勿重复添加）：
+#   核心库: numpy==1.26.4, pandas==2.1.2, scipy==1.11.2
+#   机器学习: scikit-learn==1.0.2, xgboost==1.6.2, lightgbm==3.3.5
+#   深度学习: tensorflow==2.16.1, keras==3.9.0, torch==1.13.1
+#   图像处理: opencv-python==4.7.0.72, pillow==11.2.1
+#   数据处理: pyarrow==20.0.0, openpyxl==3.1.2, lxml==5.4.0
+#   网络框架: flask==3.0.0, requests==2.32.0, aiohttp==3.12.11, gunicorn==22.0.0
+#   分布式: ray==2.46.0
+#   工具库: pyyaml==6.0.2, pydantic==1.10.21, cryptography==45.0.3
