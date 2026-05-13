@@ -49,7 +49,7 @@ Each `aishipbox <type> new` writes a `.aishipbox.toml` (project marker) and `AGE
 ## Pack output format
 
 - algo → `<name>.tar.gz` at the service dir (flat, no top-level folder).
-- op → `program_package/<id>.tar` (uncompressed; matches the labelme2pascal example). Includes manifest.yml at archive root + everything in program_package/ except any prior `.tar`.
+- op → `program_package/<id>.tar` (uncompressed). Per the PanguLM spec the archive nests under the operator id: `<id>/manifest.yml` sits beside `<id>/program_package/{process.py,dependency/,...}`. `*.tar` and `*.example` siblings are excluded from the pack.
 
 ## Documentation
 

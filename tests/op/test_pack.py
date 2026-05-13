@@ -27,8 +27,10 @@ def test_pack_builds_tar(tmp_path):
     assert out.exists()
     with tarfile.open(out, "r:") as tar:
         names = tar.getnames()
-    assert "process.py" in names
-    assert "manifest.yml" in names
+    assert "my_op/manifest.yml" in names
+    assert "my_op/program_package/process.py" in names
+    assert "manifest.yml" not in names
+    assert "process.py" not in names
 
 
 def test_pack_invalid_manifest(tmp_path):
@@ -62,5 +64,5 @@ def test_pack_excludes_example_files(tmp_path):
     assert rc == 0
     with tarfile.open(p / "program_package" / "my_op.tar", "r:") as tar:
         names = tar.getnames()
-    assert "install.sh.example" not in names
-    assert "process.py" in names
+    assert "my_op/program_package/install.sh.example" not in names
+    assert "my_op/program_package/process.py" in names

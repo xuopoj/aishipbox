@@ -43,14 +43,17 @@ def execute(path: str, output: Optional[str] = None, force: bool = False) -> int
 
     with tempfile.TemporaryDirectory() as stage_str:
         stage = Path(stage_str)
+        op_root = stage / manifest.id
+        pkg_dir = op_root / "program_package"
+        pkg_dir.mkdir(parents=True)
         for item in (project / "program_package").iterdir():
             if item.name.endswith(".tar") or item.name.endswith(".example"):
                 continue
             if item.is_dir():
-                shutil.copytree(item, stage / item.name)
+                shutil.copytree(item, pkg_dir / item.name)
             else:
-                shutil.copy2(item, stage / item.name)
-        shutil.copy2(project / "manifest.yml", stage / "manifest.yml")
+                shutil.copy2(item, pkg_dir / item.name)
+        shutil.copy2(project / "manifest.yml", op_root / "manifest.yml")
 
         build_tar(stage, out_path, excludes=OP_EXCLUDES, gzip=False)
 

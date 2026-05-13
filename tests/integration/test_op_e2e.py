@@ -54,8 +54,8 @@ def test_op_new_run_pack(tmp_path, require_python):
     assert tar_path.exists()
     with tarfile.open(tar_path, "r:") as tar:
         names = tar.getnames()
-    assert "manifest.yml" in names
-    assert "process.py" in names
+    assert "my_op/manifest.yml" in names
+    assert "my_op/program_package/process.py" in names
 
 
 def test_op_mode1_dataframe_chain(tmp_path, require_python):
