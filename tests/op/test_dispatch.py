@@ -17,7 +17,7 @@ def test_dispatch_routes_to_new_with_yes(monkeypatch):
         "--version", "0.0.1",
         "--category", "数据转换",
         "--modal", "IMAGE",
-        "--cpu-arch", "arm",
+        "--cpu-arch", "ARM",
         "--cpu", "1", "--memory", "2048", "--npu", "0",
         "--auto-data-loading=false",
         "--skeleton", "transform",
@@ -25,7 +25,7 @@ def test_dispatch_routes_to_new_with_yes(monkeypatch):
     assert rc == 0
     assert captured["name"] == "my_op"
     assert captured["yes"] is True
-    assert captured["flags"]["category"] == ["数据转换"]
+    assert captured["flags"]["category"] == "数据转换"
     assert captured["flags"]["skeleton"] == "transform"
     assert captured["flags"]["name"] == "示例"
 

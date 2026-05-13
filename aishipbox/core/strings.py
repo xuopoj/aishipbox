@@ -39,4 +39,5 @@ OP_SKELETON_TRANSFORM = "transform  - 含 moxing 数据转换示例"
 
 OP_CATEGORIES = ["数据提取", "数据抽样", "数据转换", "数据过滤", "数据去重", "数据打标", "其他"]
 OP_MODALS = ["TEXT", "IMAGE", "VIDEO", "AUDIO", "OTHER"]
-OP_CPU_ARCHES = ["arm", "x86"]
+OP_CPU_ARCHES = ["ARM"]
+OP_XPU_DEVICES = ["SNT9B"]

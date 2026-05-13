@@ -11,8 +11,8 @@ def _setup_op(tmp_path):
     (tmp_path / "program_package" / "process.py").write_text("class Process:\n    pass\n")
     m = Manifest(
         id="my_op", name="x", description="", author="", version="0.0.1",
-        category=["数据转换"], modal=["IMAGE"], format=[], language=["zh"],
-        cpu_arch=["arm"], cpu=1, memory=2048, npu=0,
+        category="数据转换", modal=["IMAGE"], format=[], language=["zh"],
+        cpu_arch=["ARM"], cpu=1, memory=2048, npu=0,
         auto_data_loading=False, arguments=[],
     )
     (tmp_path / "manifest.yml").write_text(render_manifest(m), encoding="utf-8")

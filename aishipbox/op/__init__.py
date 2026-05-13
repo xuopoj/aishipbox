@@ -22,11 +22,12 @@ def dispatch(argv: List[str]) -> int:
     p_new.add_argument("--description", default="")
     p_new.add_argument("--author", default="")
     p_new.add_argument("--version")
-    p_new.add_argument("--category", action="append", default=None)
+    p_new.add_argument("--category", default=None)
     p_new.add_argument("--modal", action="append", default=None)
     p_new.add_argument("--format", action="append", default=None)
     p_new.add_argument("--language", action="append", default=None)
     p_new.add_argument("--cpu-arch", action="append", default=None)
+    p_new.add_argument("--xpu-device", dest="xpu_devices", action="append", default=None)
     p_new.add_argument("--cpu", type=int)
     p_new.add_argument("--memory", type=int)
     p_new.add_argument("--npu", type=int)
@@ -67,6 +68,7 @@ def dispatch(argv: List[str]) -> int:
         if args.format is not None: flags["format"] = args.format
         if args.language is not None: flags["language"] = args.language
         if args.cpu_arch is not None: flags["cpu_arch"] = args.cpu_arch
+        if args.xpu_devices is not None: flags["xpu_devices"] = args.xpu_devices
         if args.cpu is not None: flags["cpu"] = args.cpu
         if args.memory is not None: flags["memory"] = args.memory
         if args.npu is not None: flags["npu"] = args.npu

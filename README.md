@@ -36,7 +36,7 @@ aishipbox op pack
 aishipbox op new my_op --yes \
   --id my_op --op-name 示例 --version 0.0.1 \
   --category 数据转换 --modal IMAGE \
-  --cpu-arch arm --cpu 1 --memory 2048 --npu 0 \
+  --cpu-arch ARM --cpu 1 --memory 2048 --npu 0 \
   --auto-data-loading=false --skeleton transform
 ```
 

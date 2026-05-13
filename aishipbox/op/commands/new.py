@@ -38,6 +38,8 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
         fields = wizard.run_wizard(default_id=name)
         fields.update(flags)
 
+    npu = int(fields["npu"])
+    xpu_devices = list(fields.get("xpu_devices") or ([] if npu == 0 else ["SNT9B"]))
     try:
         manifest = Manifest(
             id=fields["id"],
@@ -50,9 +52,10 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
             format=fields.get("format", []),
             language=fields.get("language", ["zh"]),
             cpu_arch=fields["cpu_arch"],
+            xpu_devices=xpu_devices,
             cpu=int(fields["cpu"]),
             memory=int(fields["memory"]),
-            npu=int(fields["npu"]),
+            npu=npu,
             auto_data_loading=bool(fields["auto_data_loading"]),
             arguments=fields.get("arguments", []),
         )
