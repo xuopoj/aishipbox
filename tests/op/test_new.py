@@ -40,6 +40,11 @@ def test_new_yes_full_flags_creates_project(tmp_path, monkeypatch):
     assert "PreProcess" in process_src
     assert "PostProcess" in process_src
 
+    install_example = project / "program_package" / "install.sh.example"
+    assert install_example.exists()
+    assert "find-links=./dependency" in install_example.read_text(encoding="utf-8")
+    assert not (project / "program_package" / "install.sh").exists()
+
 
 def test_new_yes_missing_required_errors(tmp_path):
     rc = new_cmd.execute(

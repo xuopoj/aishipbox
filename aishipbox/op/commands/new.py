@@ -79,6 +79,11 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
         tpl.joinpath("requirements.txt.tmpl").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
+    install_sh = project_dir / "program_package" / "install.sh.example"
+    install_sh.write_text(
+        tpl.joinpath("install.sh.example.tmpl").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
     (project_dir / ".env.example").write_text(tpl.joinpath("env.example.tmpl").read_text(encoding="utf-8"), encoding="utf-8")
     (project_dir / ".gitignore").write_text(tpl.joinpath("gitignore.tmpl").read_text(encoding="utf-8"), encoding="utf-8")
     agents_tmpl = tpl.joinpath("AGENTS.md.tmpl").read_text(encoding="utf-8")

@@ -53,3 +53,14 @@ def test_pack_refuses_existing_without_force(tmp_path):
     assert rc == 1
     rc = pack_cmd.execute(str(p), output=None, force=True)
     assert rc == 0
+
+
+def test_pack_excludes_example_files(tmp_path):
+    p = _setup_op(tmp_path)
+    (p / "program_package" / "install.sh.example").write_text("# sample\n")
+    rc = pack_cmd.execute(str(p), output=None, force=False)
+    assert rc == 0
+    with tarfile.open(p / "program_package" / "my_op.tar", "r:") as tar:
+        names = tar.getnames()
+    assert "install.sh.example" not in names
+    assert "process.py" in names

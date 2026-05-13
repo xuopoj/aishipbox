@@ -1,0 +1,14 @@
+#!/bin/sh
+# 自定义算子依赖安装脚本（可选）。
+#
+# 默认情况下，当 program_package/dependency/requirements.txt 存在时，平台会
+# 自动安装其中列出的依赖。如果你需要自定义安装命令（例如限定从本目录的本地
+# wheel 离线安装、附加额外 --index-url 等），将本文件重命名为 install.sh
+# 后修改：
+#
+#   mv install.sh.example install.sh
+#
+# 示例 —— 从 dependency/ 中离线安装本地 wheel：
+# pip install --no-index --find-links=./dependency -r ./dependency/requirements.txt
+
+set -e
