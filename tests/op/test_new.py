@@ -30,6 +30,8 @@ def test_new_yes_full_flags_creates_project(tmp_path, monkeypatch):
     project = tmp_path / "my_op"
     assert (project / "manifest.yml").exists()
     assert (project / "program_package" / "process.py").exists()
+    assert (project / "program_package" / "dependency" / "requirements.txt").exists()
+    assert not (project / "program_package" / "requirements.txt").exists()
     assert (project / "AGENTS.md").exists()
     assert (project / ".aishipbox.toml").exists()
 

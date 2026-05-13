@@ -74,7 +74,8 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
     skeleton = fields["skeleton"]
     process_tmpl = tpl.joinpath(f"process.{skeleton}.py.tmpl").read_text(encoding="utf-8")
     (project_dir / "program_package" / "process.py").write_text(process_tmpl, encoding="utf-8")
-    (project_dir / "program_package" / "requirements.txt").write_text(
+    (project_dir / "program_package" / "dependency").mkdir()
+    (project_dir / "program_package" / "dependency" / "requirements.txt").write_text(
         tpl.joinpath("requirements.txt.tmpl").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
@@ -102,7 +103,7 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
 
 def _provision_and_install(project_dir: Path) -> None:
     provision_venv(project_dir, HOSTED_RUNTIMES["op"])
-    req = project_dir / "program_package" / "requirements.txt"
+    req = project_dir / "program_package" / "dependency" / "requirements.txt"
     content = req.read_text(encoding="utf-8")
     pkgs = [l.strip() for l in content.splitlines() if l.strip() and not l.strip().startswith("#")]
     if pkgs:
