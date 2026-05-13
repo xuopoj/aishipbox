@@ -35,6 +35,11 @@ def test_new_yes_full_flags_creates_project(tmp_path, monkeypatch):
     assert (project / "AGENTS.md").exists()
     assert (project / ".aishipbox.toml").exists()
 
+    process_src = (project / "program_package" / "process.py").read_text(encoding="utf-8")
+    assert "class Process" in process_src
+    assert "PreProcess" in process_src
+    assert "PostProcess" in process_src
+
 
 def test_new_yes_missing_required_errors(tmp_path):
     rc = new_cmd.execute(

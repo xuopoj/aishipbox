@@ -1,4 +1,12 @@
-"""Sample 'transform' operator skeleton — copy OBS input to OBS output."""
+"""'transform' 骨架 —— 适用于 manifest.runtime.auto-data-loading=false。
+
+算子框架按顺序调用 PreProcess -> Process -> PostProcess
+（PreProcess/PostProcess 可选；Process 必填）。当 auto-data-loading=false 时，
+框架传入的 input 为空，需自行从 args.obs_input_path 拉取数据并写回
+args.obs_output_path，无返回值。
+
+本模板演示最简单的文件级 OBS 拷贝；将 transform() 替换为你的实际处理逻辑即可。
+"""
 
 import logging
 import os
@@ -9,6 +17,14 @@ import moxing as mox
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+
+# class PreProcess:
+#     def __init__(self, args):
+#         self.args = args
+#
+#     def __call__(self, input):
+#         return input
 
 
 class Process:
@@ -39,3 +55,11 @@ class Process:
         # TODO: replace with real logic
         for f in Path(self.input_dir).iterdir():
             (Path(self.output_dir) / f.name).write_bytes(f.read_bytes())
+
+
+# class PostProcess:
+#     def __init__(self, args):
+#         self.args = args
+#
+#     def __call__(self, input):
+#         return input

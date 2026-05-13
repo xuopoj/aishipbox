@@ -1,25 +1,48 @@
-"""Process implementation. Implement the algorithm in __call__."""
+"""算子实现。
+
+算子框架按顺序调用 PreProcess -> Process -> PostProcess
+（PreProcess/PostProcess 可选；Process 必填）。
+
+当 manifest.runtime.auto-data-loading=true 时，框架按数据集类型把每个样本
+（或文件清单）作为 pandas.DataFrame 传入；返回的 DataFrame 由框架写回
+obs_output_path。
+
+当 auto-data-loading=false 时，input 为空，需自行处理整套 OBS I/O，无返回值。
+"""
 
 import logging
-import os
 
-import moxing as mox
+import pandas as pd
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
+# 可选预处理。CPU 侧轻量处理建议放此处，提升 NPU 推理利用率。
+# class PreProcess:
+#     def __init__(self, args):
+#         self.args = args
+#
+#     def __call__(self, input: pd.DataFrame) -> pd.DataFrame:
+#         return input
+
+
 class Process:
     def __init__(self, args):
+        # args 含业务参数；args.obs_input_path / args.obs_output_path 由框架注入。
         self.args = args
-        self.input_dir = "input_dir"
-        self.output_dir = "output_dir"
-        os.makedirs(self.input_dir, exist_ok=True)
-        os.makedirs(self.output_dir, exist_ok=True)
-        logger.info("Process initialized with args=%s", args)
 
     def __call__(self, input):
-        logger.info("Run input=%s", input)
-        # TODO: implement
-        return {}
+        logger.info("Process input=%s", type(input).__name__)
+        # TODO: 实现推理逻辑。建议返回 pandas.DataFrame。
+        return input
+
+
+# 可选后处理。推理后的 CPU 侧重逻辑建议放此处。
+# class PostProcess:
+#     def __init__(self, args):
+#         self.args = args
+#
+#     def __call__(self, input: pd.DataFrame) -> pd.DataFrame:
+#         return input
