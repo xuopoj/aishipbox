@@ -9,6 +9,7 @@ from pathlib import Path
 from aishipbox.core import strings
 from aishipbox.core.env import load_env_file
 from aishipbox.core.venv import python_executable, VenvError
+from aishipbox.op.manifest import ManifestError, load_manifest
 
 
 REQUIRED_OBS_FIELDS = ("OBS_AK", "OBS_SK", "OBS_ENDPOINT", "OBS_INPUT_PATH", "OBS_OUTPUT_PATH")
@@ -43,11 +44,22 @@ def execute(path: str, obs: bool, debug: bool, debug_port: int = 5678) -> int:
 
     runner = Path(__file__).resolve().parent.parent / "runner.py"
 
+    auto_dl = "false"
+    try:
+        auto_dl = "true" if load_manifest(project).auto_data_loading else "false"
+    except (FileNotFoundError, ManifestError):
+        pass
+
     cmd = [str(py)]
     if debug:
         cmd += ["-m", "debugpy", "--listen", f"127.0.0.1:{debug_port}", "--wait-for-client"]
         print(f"调试模式：等待 VS Code 在端口 {debug_port} 附加...")
-    cmd += [str(runner), "--obs-input-path", in_path, "--obs-output-path", out_path]
+    cmd += [
+        str(runner),
+        "--obs-input-path", in_path,
+        "--obs-output-path", out_path,
+        "--auto-data-loading", auto_dl,
+    ]
 
     try:
         result = subprocess.run(cmd, env=env, cwd=str(project))

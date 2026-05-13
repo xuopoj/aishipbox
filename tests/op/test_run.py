@@ -1,13 +1,25 @@
 from aishipbox.op.commands import run as run_cmd
 from aishipbox.core.config import ProjectConfig, write_project_config
+from aishipbox.op.manifest import Manifest, Resource, render_manifest
 
 
-def _setup_op_project(tmp_path):
+def _write_manifest(tmp_path, auto_data_loading: bool):
+    m = Manifest(
+        id="my_op", name="x", description="", author="", version="0.0.1",
+        category="数据转换", modal=["IMAGE"], format=[], language=["zh"],
+        cpu_arch=["ARM"], resources=[Resource(cpu=1, memory=2048, npu=0)],
+        auto_data_loading=auto_data_loading, arguments=[],
+    )
+    (tmp_path / "manifest.yml").write_text(render_manifest(m), encoding="utf-8")
+
+
+def _setup_op_project(tmp_path, auto_data_loading: bool = False):
     write_project_config(tmp_path, ProjectConfig(type="op", runtime="3.10"))
     (tmp_path / "program_package").mkdir()
     (tmp_path / "program_package" / "process.py").write_text("class Process: pass")
     (tmp_path / "obs_input").mkdir()
     (tmp_path / "obs_output").mkdir()
+    _write_manifest(tmp_path, auto_data_loading)
     py_bin = tmp_path / ".venv" / "bin"
     py_bin.mkdir(parents=True)
     py = py_bin / "python"
@@ -31,6 +43,25 @@ def test_run_mock_sets_env(tmp_path, monkeypatch):
     assert captured["env"]["AISHIPBOX_OBS_INPUT"] == str(project / "obs_input")
     assert captured["env"]["AISHIPBOX_OBS_OUTPUT"] == str(project / "obs_output")
     assert "moxing_mock" in captured["env"]["PYTHONPATH"]
+    assert "--auto-data-loading" in captured["cmd"]
+    idx = captured["cmd"].index("--auto-data-loading")
+    assert captured["cmd"][idx + 1] == "false"
+
+
+def test_run_passes_auto_data_loading_true(tmp_path, monkeypatch):
+    project = _setup_op_project(tmp_path, auto_data_loading=True)
+    captured = {}
+
+    def fake_run(cmd, env, cwd):
+        captured.update(cmd=cmd)
+        class R: returncode = 0
+        return R()
+    monkeypatch.setattr("aishipbox.op.commands.run.subprocess.run", fake_run)
+
+    rc = run_cmd.execute(str(project), obs=False, debug=False)
+    assert rc == 0
+    idx = captured["cmd"].index("--auto-data-loading")
+    assert captured["cmd"][idx + 1] == "true"
 
 
 def test_run_obs_missing_creds_fails(tmp_path):
