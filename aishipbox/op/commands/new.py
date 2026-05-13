@@ -12,7 +12,7 @@ from aishipbox.core import strings
 from aishipbox.core.config import HOSTED_RUNTIMES, ProjectConfig, write_project_config
 from aishipbox.core.venv import provision_venv, pip_install
 from aishipbox.op import wizard
-from aishipbox.op.manifest import Manifest, ManifestError, render_manifest
+from aishipbox.op.manifest import Manifest, ManifestError, Resource, render_manifest
 
 
 REQUIRED_FIELDS = (
@@ -40,6 +40,7 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
 
     npu = int(fields["npu"])
     xpu_devices = list(fields.get("xpu_devices") or ([] if npu == 0 else ["SNT9B"]))
+    resource_list = [Resource(cpu=int(fields["cpu"]), memory=int(fields["memory"]), npu=npu)]
     try:
         manifest = Manifest(
             id=fields["id"],
@@ -53,9 +54,7 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
             language=fields.get("language", ["zh"]),
             cpu_arch=fields["cpu_arch"],
             xpu_devices=xpu_devices,
-            cpu=int(fields["cpu"]),
-            memory=int(fields["memory"]),
-            npu=npu,
+            resources=resource_list,
             auto_data_loading=bool(fields["auto_data_loading"]),
             arguments=fields.get("arguments", []),
         )

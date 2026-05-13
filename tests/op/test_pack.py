@@ -2,7 +2,7 @@ import tarfile
 
 from aishipbox.op.commands import pack as pack_cmd
 from aishipbox.core.config import ProjectConfig, write_project_config
-from aishipbox.op.manifest import Manifest, render_manifest
+from aishipbox.op.manifest import Manifest, Resource, render_manifest
 
 
 def _setup_op(tmp_path):
@@ -12,7 +12,7 @@ def _setup_op(tmp_path):
     m = Manifest(
         id="my_op", name="x", description="", author="", version="0.0.1",
         category="数据转换", modal=["IMAGE"], format=[], language=["zh"],
-        cpu_arch=["ARM"], cpu=1, memory=2048, npu=0,
+        cpu_arch=["ARM"], resources=[Resource(cpu=1, memory=2048, npu=0)],
         auto_data_loading=False, arguments=[],
     )
     (tmp_path / "manifest.yml").write_text(render_manifest(m), encoding="utf-8")
