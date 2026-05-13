@@ -1,0 +1,22 @@
+# AGENTS.md
+
+本项目类型：MAS 算法服务（algo）
+托管运行时：Python 3.9
+工具：aishipbox v${aishipbox_version}
+
+## 入口
+- main.py 中的 `AlgoProcessor` 类
+
+## 常用命令
+- 本地运行：    aishipbox algo run
+- 启动调试：    aishipbox algo run --debug   （需配合 VS Code "Attach to Algo Service"）
+- 打包：        aishipbox algo pack
+- 安装托管依赖：aishipbox algo install-deps
+
+## 关键约束
+- 部署到 MAS 托管服务，结构遵循 main.py + requirements.txt + dependency/。
+- requirements.txt 中可引用 dependency/ 下的离线 wheel。
+- 不要修改 .aishipbox.toml 的 schema_version 与 type 字段。
+
+## 平台参考
+- 算法手册：参见 MAS 文档

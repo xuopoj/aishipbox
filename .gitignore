@@ -5,9 +5,18 @@ build/
 dist/
 wheels/
 *.egg-info
+.pytest_cache/
+.coverage
 
 # Virtual environments
 .venv
+
+# Env files
+.env
+
+# Build artifacts
+*.tar
+*.tar.gz
 
 # Reference material (not part of the package)
 resources/

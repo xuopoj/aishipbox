@@ -1,0 +1,22 @@
+# AGENTS.md
+
+本项目类型：PanguLM 自定义算子（op）
+托管运行时：Python 3.10
+工具：aishipbox v${aishipbox_version}
+
+## 入口
+- program_package/process.py 中的 `Process` 类（实现 __call__）
+
+## 常用命令
+- 本地调试（mock OBS）：aishipbox op run
+- 本地调试（真实 OBS）：aishipbox op run --obs
+- 启动调试：           aishipbox op run --debug   （配合 VS Code "Attach to Op Service"）
+- 打包：               aishipbox op pack
+
+## 关键约束
+- 算子通过 moxing 访问 OBS；本地默认 mock 到 obs_input/、obs_output/。
+- 修改 manifest.yml 后请重新 pack。
+- 不要修改 .aishipbox.toml 的 schema_version 与 type 字段。
+
+## 平台参考
+- 算子手册：https://support.huaweicloud.com/usermanual-pangulm/pangulm_04_0043.html

@@ -1,0 +1,41 @@
+"""Sample 'transform' operator skeleton — copy OBS input to OBS output."""
+
+import logging
+import os
+from pathlib import Path
+
+import moxing as mox
+
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+
+class Process:
+    def __init__(self, args):
+        self.args = args
+        self.input_dir = "input_dir"
+        self.output_dir = "output_dir"
+        os.makedirs(self.input_dir, exist_ok=True)
+        os.makedirs(self.output_dir, exist_ok=True)
+
+    def __call__(self, input):
+        in_obs = self.args.obs_input_path
+        out_obs = self.args.obs_output_path
+
+        for filename in mox.file.list_directory(in_obs, recursive=False):
+            logger.info("download %s", filename)
+            mox.file.copy(os.path.join(in_obs, filename), os.path.join(self.input_dir, filename))
+
+        self.transform()
+
+        for root, _dirs, files in os.walk(self.output_dir):
+            for f in files:
+                local = os.path.join(root, f)
+                rel = os.path.relpath(local, self.output_dir)
+                mox.file.copy(local, os.path.join(out_obs, rel))
+
+    def transform(self) -> None:
+        # TODO: replace with real logic
+        for f in Path(self.input_dir).iterdir():
+            (Path(self.output_dir) / f.name).write_bytes(f.read_bytes())
