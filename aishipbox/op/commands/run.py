@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from pathlib import Path
+from typing import Any, Dict
 
 from aishipbox.core import strings
 from aishipbox.core.env import load_env_file
 from aishipbox.core.venv import python_executable, VenvError
-from aishipbox.op.manifest import ManifestError, load_manifest
+from aishipbox.op.manifest import Manifest, ManifestError, load_manifest
 
 
 REQUIRED_OBS_FIELDS = ("OBS_AK", "OBS_SK", "OBS_ENDPOINT", "OBS_INPUT_PATH", "OBS_OUTPUT_PATH")
@@ -45,8 +47,11 @@ def execute(path: str, obs: bool, debug: bool, debug_port: int = 5678) -> int:
     runner = Path(__file__).resolve().parent.parent / "runner.py"
 
     auto_dl = "false"
+    operator_args: Dict[str, Any] = {}
     try:
-        auto_dl = "true" if load_manifest(project).auto_data_loading else "false"
+        manifest = load_manifest(project)
+        auto_dl = "true" if manifest.auto_data_loading else "false"
+        operator_args = _operator_args_from_manifest(manifest)
     except (FileNotFoundError, ManifestError):
         pass
 
@@ -59,6 +64,7 @@ def execute(path: str, obs: bool, debug: bool, debug_port: int = 5678) -> int:
         "--obs-input-path", in_path,
         "--obs-output-path", out_path,
         "--auto-data-loading", auto_dl,
+        "--operator-args", json.dumps(operator_args, ensure_ascii=False),
     ]
 
     try:
@@ -66,3 +72,13 @@ def execute(path: str, obs: bool, debug: bool, debug_port: int = 5678) -> int:
         return result.returncode
     except KeyboardInterrupt:
         return 0
+
+
+def _operator_args_from_manifest(manifest: Manifest) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    for arg in manifest.arguments:
+        key = arg.get("key")
+        if not key:
+            continue
+        out[str(key)] = arg.get("default")
+    return out

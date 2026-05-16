@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import logging
 import os
 import sys
@@ -28,6 +29,9 @@ logger = logging.getLogger(__name__)
 
 
 CLASS_ORDER = ("PreProcess", "Process", "PostProcess")
+RESERVED_ARG_KEYS = frozenset({
+    "obs_input_path", "obs_output_path", "auto_data_loading", "operator_args",
+})
 
 
 def main() -> int:
@@ -35,7 +39,24 @@ def main() -> int:
     parser.add_argument("--obs-input-path", default="obs://input/")
     parser.add_argument("--obs-output-path", default="obs://output/")
     parser.add_argument("--auto-data-loading", default="false")
+    parser.add_argument("--operator-args", default="{}")
     args = parser.parse_args()
+
+    try:
+        operator_args = json.loads(args.operator_args)
+        if not isinstance(operator_args, dict):
+            raise ValueError("operator-args 必须是 JSON 对象")
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error("解析 --operator-args 失败：%s", e)
+        return 1
+
+    for key, value in operator_args.items():
+        if key in RESERVED_ARG_KEYS:
+            logger.warning("manifest argument key 与框架保留字冲突，已忽略：%s", key)
+            continue
+        setattr(args, key, value)
+    if operator_args:
+        logger.info("算子参数：%s", operator_args)
 
     process_py = Path("program_package/process.py").resolve()
     if not process_py.exists():

@@ -58,6 +58,66 @@ def test_op_new_run_pack(tmp_path, require_python):
     assert "my_op/program_package/process.py" in names
 
 
+def test_op_manifest_arguments_reach_process(tmp_path, require_python):
+    """manifest.arguments defaults reach Process via args.<key>."""
+    require_python("3.10")
+    if not shutil.which("uv"):
+        pytest.skip("uv not available")
+
+    r = _run(
+        "op", "new", "args_op",
+        "--dir", str(tmp_path),
+        "--yes",
+        "--id", "args_op",
+        "--op-name", "args_op",
+        "--version", "0.0.1",
+        "--category", "数据转换",
+        "--modal", "IMAGE",
+        "--cpu-arch", "ARM",
+        "--cpu", "1", "--memory", "2048", "--npu", "0",
+        "--auto-data-loading=true",
+        "--skeleton", "blank",
+    )
+    assert r.returncode == 0, r.stderr
+
+    project = tmp_path / "args_op"
+    import yaml
+    manifest_path = project / "manifest.yml"
+    doc = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    doc["arguments"] = [
+        {"key": "threshold", "name": "阈值", "type": "FLOAT", "between": False, "default": 0.5},
+        {"key": "label", "name": "标签", "type": "STRING", "default": "hello"},
+    ]
+    manifest_path.write_text(yaml.safe_dump(doc, allow_unicode=True, sort_keys=False), encoding="utf-8")
+
+    (project / "program_package" / "process.py").write_text(
+        "import json\n"
+        "import os\n"
+        "import pandas as pd\n"
+        "\n"
+        "class Process:\n"
+        "    def __init__(self, args):\n"
+        "        self.args = args\n"
+        "    def __call__(self, df):\n"
+        "        out = pd.DataFrame([{\n"
+        "            'threshold': self.args.threshold,\n"
+        "            'label': self.args.label,\n"
+        "        }])\n"
+        "        return out\n",
+        encoding="utf-8",
+    )
+    (project / "obs_input" / "x.txt").write_bytes(b"x")
+
+    r = _run("op", "run", cwd=project)
+    assert r.returncode == 0, r.stderr
+
+    result = project / "obs_output" / "result.jsonl"
+    assert result.exists(), r.stdout + r.stderr
+    import json as _json
+    rows = [_json.loads(l) for l in result.read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert rows == [{"threshold": 0.5, "label": "hello"}]
+
+
 def test_op_mode1_dataframe_chain(tmp_path, require_python):
     """auto-data-loading=true: framework builds a DataFrame of obs_input files
     and chains it through PreProcess -> Process -> PostProcess. Each stage
