@@ -177,3 +177,21 @@ def test_remove_directory_requires_recursive(tmp_path, mox):
 
 def test_remove_missing_path_is_silent(tmp_path, mox):
     mox.file.remove("obs://input/never_existed")
+
+
+def test_unknown_bucket_raises(tmp_path, mox):
+    with pytest.raises(ValueError, match="未识别的 bucket"):
+        mox.file.exists("obs://pcb-data-me/file.zip")
+
+
+def test_input_lookalike_bucket_is_rejected(tmp_path, mox):
+    # obs://input_dir/... must NOT be silently aliased to AISHIPBOX_OBS_INPUT.
+    with pytest.raises(ValueError, match="未识别的 bucket"):
+        mox.file.exists("obs://input_dir/a.txt")
+
+
+def test_input_bucket_root_resolves(tmp_path, mox):
+    (tmp_path / "in" / "f.txt").write_bytes(b"x")
+    # both forms should resolve identically
+    assert mox.file.exists("obs://input/f.txt") is True
+    assert mox.file.exists("obs://input/") is True

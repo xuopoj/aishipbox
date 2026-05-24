@@ -21,22 +21,20 @@ from typing import Iterator, List, Tuple, Union
 
 
 _OBS_PREFIX = "obs://"
+_BUCKETS = {"input": "AISHIPBOX_OBS_INPUT", "output": "AISHIPBOX_OBS_OUTPUT"}
 
 
 def _local(path: str) -> Path:
     if not path.startswith(_OBS_PREFIX):
         return Path(path)
     rest = path[len(_OBS_PREFIX):]
-    if rest.startswith("input"):
-        root = os.environ["AISHIPBOX_OBS_INPUT"]
-        rel = rest[len("input"):].lstrip("/")
-    elif rest.startswith("output"):
-        root = os.environ["AISHIPBOX_OBS_OUTPUT"]
-        rel = rest[len("output"):].lstrip("/")
-    else:
-        root = os.environ["AISHIPBOX_OBS_INPUT"]
-        rel = rest
-    return Path(root) / rel
+    bucket, _, rel = rest.partition("/")
+    env_var = _BUCKETS.get(bucket)
+    if env_var is None:
+        raise ValueError(
+            f"moxing_mock 只支持 obs://input/ 和 obs://output/，未识别的 bucket：obs://{bucket}/"
+        )
+    return Path(os.environ[env_var]) / rel
 
 
 # ---- listing / inspection ---------------------------------------------------
