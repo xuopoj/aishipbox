@@ -36,9 +36,11 @@ def execute(path: str, obs: bool, debug: bool, debug_port: int = 5678) -> int:
         in_path = env["OBS_INPUT_PATH"]
         out_path = env["OBS_OUTPUT_PATH"]
     else:
-        mock_root = Path(__file__).resolve().parent.parent / "moxing_mock"
+        op_pkg = Path(__file__).resolve().parent.parent
+        mock_roots = [op_pkg / "moxing_mock", op_pkg / "ma_utils_mock"]
         existing = env.get("PYTHONPATH", "")
-        env["PYTHONPATH"] = f"{mock_root}{os.pathsep}{existing}" if existing else str(mock_root)
+        prefix = os.pathsep.join(str(r) for r in mock_roots)
+        env["PYTHONPATH"] = f"{prefix}{os.pathsep}{existing}" if existing else prefix
         env["AISHIPBOX_OBS_INPUT"] = str(project / "obs_input")
         env["AISHIPBOX_OBS_OUTPUT"] = str(project / "obs_output")
         in_path = "obs://input/"

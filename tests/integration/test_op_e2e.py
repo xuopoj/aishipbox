@@ -306,6 +306,41 @@ def test_op_mode1_parquet_input_injects_system_columns(tmp_path, require_python)
     assert all("file_name" in r and r["file_name"] == "samples.parquet" for r in rows)
 
 
+def test_op_ma_utils_logger_available_in_mock(tmp_path, require_python):
+    """`import ma_utils as utils; utils.FileLogger.get_logger()` works in op run."""
+    require_python("3.10")
+    if not shutil.which("uv"):
+        pytest.skip("uv not available")
+
+    r = _run(
+        "op", "new", "logger_op",
+        "--dir", str(tmp_path),
+        "--yes",
+        "--id", "logger_op", "--op-name", "logger", "--version", "0.0.1",
+        "--category", "数据转换", "--modal", "IMAGE", "--cpu-arch", "ARM",
+        "--cpu", "1", "--memory", "2048", "--npu", "0",
+        "--auto-data-loading=false", "--skeleton", "blank",
+    )
+    assert r.returncode == 0, r.stderr
+
+    project = tmp_path / "logger_op"
+    (project / "program_package" / "process.py").write_text(
+        "import ma_utils as utils\n"
+        "logger = utils.FileLogger.get_logger()\n"
+        "class Process:\n"
+        "    def __init__(self, args):\n"
+        "        logger.info('process init ok')\n"
+        "    def __call__(self, df):\n"
+        "        logger.info('process call ok')\n",
+        encoding="utf-8",
+    )
+
+    r = _run("op", "run", cwd=project)
+    assert r.returncode == 0, r.stderr
+    assert "process init ok" in r.stdout
+    assert "process call ok" in r.stdout
+
+
 def test_op_mode1_dataframe_chain(tmp_path, require_python):
     """auto-data-loading=true: framework builds a DataFrame of obs_input files
     and chains it through PreProcess -> Process -> PostProcess. Each stage

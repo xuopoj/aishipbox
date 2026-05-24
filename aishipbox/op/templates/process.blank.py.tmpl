@@ -10,13 +10,12 @@ obs_output_path。
 当 auto-data-loading=false 时，input 为空，需自行处理整套 OBS I/O，无返回值。
 """
 
-import logging
-
 import pandas as pd
 
+import ma_utils as utils
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
+
+logger = utils.FileLogger.get_logger()
 
 
 # 可选预处理。CPU 侧轻量处理建议放此处，提升 NPU 推理利用率。

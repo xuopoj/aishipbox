@@ -8,15 +8,14 @@ args.obs_output_path，无返回值。
 本模板演示最简单的文件级 OBS 拷贝；将 transform() 替换为你的实际处理逻辑即可。
 """
 
-import logging
 import os
 from pathlib import Path
 
 import moxing as mox
+import ma_utils as utils
 
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
+logger = utils.FileLogger.get_logger()
 
 
 # class PreProcess:
