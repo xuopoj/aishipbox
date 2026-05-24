@@ -9,9 +9,10 @@ once per input file in Mode 1 — per the spec, "每个文件调用一次算子"
 Mode 1 (auto-data-loading=true):
   For each file under AISHIPBOX_OBS_INPUT, builds a per-file DataFrame whose
   shape depends on the extension:
-    * .jsonl  → pd.read_json(lines=True); columns = file's own fields
-    * .csv    → pd.read_csv;              columns = file's own fields
-    * other   → 1-row DataFrame with `file_path` + `file_name`
+    * .jsonl   → pd.read_json(lines=True);  columns = file's own fields
+    * .csv     → pd.read_csv;               columns = file's own fields
+    * .parquet → pd.read_parquet + system file_path/file_name columns injected
+    * other    → 1-row DataFrame with `file_path` + `file_name`
   Runs each through the chain, then concats and writes to
   AISHIPBOX_OBS_OUTPUT/result.jsonl as a mock-only sink (the platform decides
   the real output location).
@@ -160,6 +161,21 @@ def _read_file_as_df(pd, p, root):
         except Exception as e:
             logger.warning("读取 csv 失败 %s：%s", p, e)
             return None
+    if ext == ".parquet":
+        try:
+            df = pd.read_parquet(p)
+        except ImportError:
+            logger.error(
+                "读取 parquet 需要 pyarrow，请在项目中执行 `uv add pyarrow` 或更新 "
+                "program_package/dependency/requirements.txt"
+            )
+            return None
+        except Exception as e:
+            logger.warning("读取 parquet 失败 %s：%s", p, e)
+            return None
+        df["file_path"] = str(p.resolve())
+        df["file_name"] = str(p.relative_to(root))
+        return df
     return pd.DataFrame(
         [{"file_path": str(p.resolve()), "file_name": str(p.relative_to(root))}],
         columns=["file_path", "file_name"],

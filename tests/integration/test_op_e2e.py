@@ -252,6 +252,60 @@ def test_op_mode1_csv_input_exposes_file_columns(tmp_path, require_python):
     ]
 
 
+def test_op_mode1_parquet_input_injects_system_columns(tmp_path, require_python):
+    """Parquet inputs: framework passes file's own columns AND injects system
+    file_path / file_name columns alongside (per spec for image/video/audio
+    parquet modalities)."""
+    require_python("3.10")
+    if not shutil.which("uv"):
+        pytest.skip("uv not available")
+
+    r = _run(
+        "op", "new", "parquet_op",
+        "--dir", str(tmp_path),
+        "--yes",
+        "--id", "parquet_op", "--op-name", "parquet", "--version", "0.0.1",
+        "--category", "数据转换", "--modal", "IMAGE", "--cpu-arch", "ARM",
+        "--cpu", "1", "--memory", "2048", "--npu", "0",
+        "--auto-data-loading=true", "--skeleton", "blank",
+    )
+    assert r.returncode == 0, r.stderr
+
+    project = tmp_path / "parquet_op"
+    # Use the project's own venv (which has pyarrow via the template) to write
+    # the input parquet, so we don't impose pyarrow on the dev venv.
+    project_py = project / ".venv" / "bin" / "python"
+    parquet_path = project / "obs_input" / "samples.parquet"
+    write_script = (
+        "import pandas as pd\n"
+        f"pd.DataFrame({{'image_id': [1, 2], 'caption': ['cat', 'dog']}})"
+        f".to_parquet(r'{parquet_path}')\n"
+    )
+    r = subprocess.run([str(project_py), "-c", write_script], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+
+    (project / "program_package" / "process.py").write_text(
+        "class Process:\n"
+        "    def __init__(self, args): pass\n"
+        "    def __call__(self, df):\n"
+        "        cols = set(df.columns)\n"
+        "        assert {'image_id', 'caption', 'file_path', 'file_name'} <= cols, f'got {cols}'\n"
+        "        assert len(df) == 2\n"
+        "        df = df.copy(); df['caption_upper'] = df['caption'].str.upper(); return df\n",
+        encoding="utf-8",
+    )
+
+    r = _run("op", "run", cwd=project)
+    assert r.returncode == 0, r.stderr
+
+    import json as _json
+    rows = [_json.loads(l) for l in (project / "obs_output" / "result.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert len(rows) == 2
+    assert {r["image_id"]: r["caption_upper"] for r in rows} == {1: "CAT", 2: "DOG"}
+    # System columns present in output rows.
+    assert all("file_name" in r and r["file_name"] == "samples.parquet" for r in rows)
+
+
 def test_op_mode1_dataframe_chain(tmp_path, require_python):
     """auto-data-loading=true: framework builds a DataFrame of obs_input files
     and chains it through PreProcess -> Process -> PostProcess. Each stage
