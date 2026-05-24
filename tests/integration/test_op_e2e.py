@@ -118,6 +118,55 @@ def test_op_manifest_arguments_reach_process(tmp_path, require_python):
     assert rows == [{"threshold": 0.5, "label": "hello"}]
 
 
+def test_op_mode1_per_file_invocation(tmp_path, require_python):
+    """auto-data-loading=true: chain runs once per input file with a 1-row
+    DataFrame. Operator asserts len(df) == 1; would fail under bulk invocation."""
+    require_python("3.10")
+    if not shutil.which("uv"):
+        pytest.skip("uv not available")
+
+    r = _run(
+        "op", "new", "perfile_op",
+        "--dir", str(tmp_path),
+        "--yes",
+        "--id", "perfile_op",
+        "--op-name", "perfile",
+        "--version", "0.0.1",
+        "--category", "数据转换",
+        "--modal", "IMAGE",
+        "--cpu-arch", "ARM",
+        "--cpu", "1", "--memory", "2048", "--npu", "0",
+        "--auto-data-loading=true",
+        "--skeleton", "blank",
+    )
+    assert r.returncode == 0, r.stderr
+
+    project = tmp_path / "perfile_op"
+    (project / "program_package" / "process.py").write_text(
+        "class Process:\n"
+        "    def __init__(self, args):\n"
+        "        self.call_count = 0\n"
+        "    def __call__(self, df):\n"
+        "        assert len(df) == 1, f'expected per-file df, got {len(df)} rows'\n"
+        "        self.call_count += 1\n"
+        "        df = df.copy(); df['n'] = self.call_count; return df\n",
+        encoding="utf-8",
+    )
+    (project / "obs_input" / "a.txt").write_bytes(b"a")
+    (project / "obs_input" / "b.txt").write_bytes(b"b")
+    (project / "obs_input" / "c.txt").write_bytes(b"c")
+
+    r = _run("op", "run", cwd=project)
+    assert r.returncode == 0, r.stderr
+
+    import json as _json
+    result = project / "obs_output" / "result.jsonl"
+    rows = [_json.loads(l) for l in result.read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert len(rows) == 3
+    # Process instance is reused across files → call_count increments 1, 2, 3.
+    assert [r["n"] for r in rows] == [1, 2, 3]
+
+
 def test_op_mode1_dataframe_chain(tmp_path, require_python):
     """auto-data-loading=true: framework builds a DataFrame of obs_input files
     and chains it through PreProcess -> Process -> PostProcess. Each stage

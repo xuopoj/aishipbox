@@ -2,15 +2,19 @@
 
 Emulates the platform framework's call order: PreProcess -> Process -> PostProcess.
 
+Classes are instantiated once per run (Process.__init__ may load models /
+allocate state). The PreProcess/Process/PostProcess chain is then invoked
+once per input file in Mode 1 — per the spec, "每个文件调用一次算子".
+
 Mode 1 (auto-data-loading=true):
-  Builds a pandas.DataFrame of files under AISHIPBOX_OBS_INPUT with columns
-  `file_path` (absolute local path) and `file_name` (relative path). Feeds it
-  through each class; whenever a class returns a DataFrame, that becomes the
-  input to the next stage. Writes the final DataFrame to
-  AISHIPBOX_OBS_OUTPUT/result.jsonl.
+  For each file under AISHIPBOX_OBS_INPUT, builds a single-row DataFrame with
+  columns `file_path` (absolute local path) and `file_name` (relative path),
+  runs it through the chain, and collects the returned DataFrame. Per-file
+  results are concatenated and written to AISHIPBOX_OBS_OUTPUT/result.jsonl
+  as a mock-only sink (the platform decides the real output location).
 
 Mode 2 (auto-data-loading=false):
-  Calls each class with an empty DataFrame. Classes do their own OBS I/O.
+  Calls each class once with an empty DataFrame. Classes do their own OBS I/O.
   No output file is written by the runner.
 """
 
@@ -83,47 +87,61 @@ def main() -> int:
         )
         return 1
 
-    df = _build_input_df(pd, auto)
-
+    instances = {}
     for cls_name in CLASS_ORDER:
         cls = getattr(module, cls_name, None)
-        if cls is None:
-            continue
-        logger.info("→ %s", cls_name)
-        instance = cls(args)
-        result = instance(df)
-        if isinstance(result, pd.DataFrame):
-            df = result
+        if cls is not None:
+            instances[cls_name] = cls(args)
 
     if auto:
-        _write_output_df(pd, df)
+        file_dfs = _build_input_file_dfs(pd)
+        logger.info("发现 %d 个输入文件，将逐个调用算子链", len(file_dfs))
+        results = []
+        for file_df in file_dfs:
+            file_name = file_df.iloc[0]["file_name"]
+            df = file_df
+            for cls_name in CLASS_ORDER:
+                inst = instances.get(cls_name)
+                if inst is None:
+                    continue
+                logger.info("→ %s [%s]", cls_name, file_name)
+                result = inst(df)
+                if isinstance(result, pd.DataFrame):
+                    df = result
+            results.append(df)
+        final_df = pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+        _write_output_df(pd, final_df)
+    else:
+        df = pd.DataFrame()
+        for cls_name in CLASS_ORDER:
+            inst = instances.get(cls_name)
+            if inst is None:
+                continue
+            logger.info("→ %s", cls_name)
+            inst(df)
 
     return 0
 
 
-def _build_input_df(pd, auto: bool):
-    if not auto:
-        return pd.DataFrame()
-
+def _build_input_file_dfs(pd):
     obs_input = os.environ.get("AISHIPBOX_OBS_INPUT")
     if not obs_input:
-        logger.warning("AISHIPBOX_OBS_INPUT 未设置，使用空 DataFrame")
-        return pd.DataFrame()
+        logger.warning("AISHIPBOX_OBS_INPUT 未设置")
+        return []
 
     root = Path(obs_input)
     if not root.is_dir():
         logger.warning("输入目录不存在：%s", root)
-        return pd.DataFrame()
+        return []
 
-    rows = []
+    dfs = []
     for p in sorted(root.rglob("*")):
         if p.is_file():
-            rows.append({
-                "file_path": str(p.resolve()),
-                "file_name": str(p.relative_to(root)),
-            })
-    logger.info("构造输入 DataFrame：%d 行 (来自 %s)", len(rows), root)
-    return pd.DataFrame(rows, columns=["file_path", "file_name"])
+            dfs.append(pd.DataFrame(
+                [{"file_path": str(p.resolve()), "file_name": str(p.relative_to(root))}],
+                columns=["file_path", "file_name"],
+            ))
+    return dfs
 
 
 def _write_output_df(pd, df) -> None:
