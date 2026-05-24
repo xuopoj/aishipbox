@@ -341,6 +341,71 @@ def test_op_ma_utils_logger_available_in_mock(tmp_path, require_python):
     assert "process call ok" in r.stdout
 
 
+def test_op_mode1_mixed_extensions_fail_fast(tmp_path, require_python):
+    """Mode 1 with mixed record/raw files exits non-zero with a clear message
+    so users don't get silent NaN-hole concat output."""
+    require_python("3.10")
+    if not shutil.which("uv"):
+        pytest.skip("uv not available")
+
+    r = _run(
+        "op", "new", "mixed_op",
+        "--dir", str(tmp_path),
+        "--yes",
+        "--id", "mixed_op", "--op-name", "mixed", "--version", "0.0.1",
+        "--category", "数据转换", "--modal", "TEXT", "--cpu-arch", "ARM",
+        "--cpu", "1", "--memory", "2048", "--npu", "0",
+        "--auto-data-loading=true", "--skeleton", "blank",
+    )
+    assert r.returncode == 0, r.stderr
+
+    project = tmp_path / "mixed_op"
+    (project / "obs_input" / "data.jsonl").write_text('{"x":1}\n', encoding="utf-8")
+    (project / "obs_input" / "image.jpg").write_bytes(b"\xff\xd8\xff")
+
+    r = _run("op", "run", cwd=project)
+    assert r.returncode != 0
+    combined = r.stdout + r.stderr
+    assert "混合了不同类型的文件" in combined
+    assert "auto-data-loading=false" in combined
+
+
+def test_op_mode1_non_dataframe_return_warns_but_succeeds(tmp_path, require_python):
+    """Process returning None in Mode 1 should warn (naming the stage and
+    file) and continue with the prior DataFrame rather than failing silently."""
+    require_python("3.10")
+    if not shutil.which("uv"):
+        pytest.skip("uv not available")
+
+    r = _run(
+        "op", "new", "noreturn_op",
+        "--dir", str(tmp_path),
+        "--yes",
+        "--id", "noreturn_op", "--op-name", "noreturn", "--version", "0.0.1",
+        "--category", "数据转换", "--modal", "IMAGE", "--cpu-arch", "ARM",
+        "--cpu", "1", "--memory", "2048", "--npu", "0",
+        "--auto-data-loading=true", "--skeleton", "blank",
+    )
+    assert r.returncode == 0, r.stderr
+
+    project = tmp_path / "noreturn_op"
+    (project / "program_package" / "process.py").write_text(
+        "class Process:\n"
+        "    def __init__(self, args): pass\n"
+        "    def __call__(self, df):\n"
+        "        return None\n",
+        encoding="utf-8",
+    )
+    (project / "obs_input" / "a.txt").write_bytes(b"x")
+
+    r = _run("op", "run", cwd=project)
+    assert r.returncode == 0, r.stderr
+    combined = r.stdout + r.stderr
+    assert "Process" in combined
+    assert "a.txt" in combined
+    assert "非 DataFrame" in combined
+
+
 def test_op_mode1_dataframe_chain(tmp_path, require_python):
     """auto-data-loading=true: framework builds a DataFrame of obs_input files
     and chains it through PreProcess -> Process -> PostProcess. Each stage

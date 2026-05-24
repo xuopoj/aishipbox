@@ -40,6 +40,7 @@ CLASS_ORDER = ("PreProcess", "Process", "PostProcess")
 RESERVED_ARG_KEYS = frozenset({
     "obs_input_path", "obs_output_path", "auto_data_loading", "operator_args",
 })
+RECORD_EXTS = frozenset({".jsonl", ".csv", ".parquet"})
 
 
 def main() -> int:
@@ -98,7 +99,11 @@ def main() -> int:
             instances[cls_name] = cls(args)
 
     if auto:
-        file_dfs = _build_input_file_dfs(pd)
+        try:
+            file_dfs = _build_input_file_dfs(pd)
+        except ValueError as e:
+            logger.error("%s", e)
+            return 1
         logger.info("发现 %d 个输入文件，将逐个调用算子链", len(file_dfs))
         results = []
         for file_name, file_df in file_dfs:
@@ -111,6 +116,11 @@ def main() -> int:
                 result = inst(df)
                 if isinstance(result, pd.DataFrame):
                     df = result
+                else:
+                    logger.warning(
+                        "%s [%s] 返回了非 DataFrame (%s)，沿用上一阶段的 DataFrame",
+                        cls_name, file_name, type(result).__name__,
+                    )
             results.append(df)
         final_df = pd.concat(results, ignore_index=True) if results else pd.DataFrame()
         _write_output_df(pd, final_df)
@@ -137,14 +147,26 @@ def _build_input_file_dfs(pd):
         logger.warning("输入目录不存在：%s", root)
         return []
 
+    files = [p for p in sorted(root.rglob("*")) if p.is_file()]
+    _check_input_uniformity(files)
+
     pairs = []
-    for p in sorted(root.rglob("*")):
-        if not p.is_file():
-            continue
+    for p in files:
         df = _read_file_as_df(pd, p, root)
         if df is not None:
             pairs.append((str(p.relative_to(root)), df))
     return pairs
+
+
+def _check_input_uniformity(files) -> None:
+    exts = {p.suffix.lower() for p in files}
+    record_exts_used = exts & RECORD_EXTS
+    if record_exts_used and len(exts) > 1:
+        raise ValueError(
+            f"输入目录混合了不同类型的文件 ({sorted(exts)})。当存在 JSONL/CSV/Parquet 时，"
+            "所有文件必须为同一类型，否则各文件返回的 DataFrame schema 不一致会破坏结果。"
+            "如需多模态输入，请在 manifest 中设置 auto-data-loading=false 并自行读取 OBS 数据。"
+        )
 
 
 def _read_file_as_df(pd, p, root):
