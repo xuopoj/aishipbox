@@ -1,22 +1,169 @@
 # AGENTS.md
 
-本项目类型：PanguLM 自定义算子（op）
-托管运行时：Python 3.10
-工具：aishipbox v${aishipbox_version}
+PanguLM 自定义算子项目 — AI agent 快速上手与约束。
 
-## 入口
-- program_package/process.py 中的 `Process` 类（实现 __call__）
+- 工具：aishipbox v${aishipbox_version}
+- 托管运行时：Python 3.10（已在 `.venv/` 中）
+- 入口：`program_package/process.py` 中的 `Process` 类（必填，实现 `__call__`）
+
+## 文件布局
+
+```
+.
+├── manifest.yml                      # 算子元数据（id/name/modal/runtime/arguments/labels）
+├── program_package/
+│   ├── process.py                    # 算子主实现（必填）
+│   ├── dependency/
+│   │   └── requirements.txt          # 额外依赖（平台 ~250 个常用包已预置）
+│   └── install.sh.example            # 自定义安装命令模板
+├── obs_input/                        # 本地 mock 输入（→ obs://input/）
+├── obs_output/                       # 本地 mock 输出（→ obs://output/）
+├── .env.example  .env                # `--obs` 模式凭据（OBS_AK/SK/ENDPOINT/...）
+├── .vscode/launch.json               # `aishipbox op debug` 生成
+├── .venv/                            # 项目独立的 Python 3.10 venv
+└── .aishipbox.toml                   # 项目类型标记（勿改 schema_version / type）
+```
+
+## process.py 两种模式
+
+由 `manifest.yml > runtime > auto-data-loading` 决定（先 `cat manifest.yml` 确认当前模式）。
+
+### 模式一 — auto-data-loading: true
+
+框架按文件类型构造 pandas.DataFrame，**逐文件**调用 PreProcess → Process → PostProcess。
+
+```python
+import pandas as pd
+import ma_utils as utils
+
+logger = utils.FileLogger.get_logger()
+
+
+class PreProcess:                        # 可选
+    def __init__(self, args): ...
+    def __call__(self, input: pd.DataFrame) -> pd.DataFrame: ...
+
+
+class Process:                           # 必填
+    def __init__(self, args): ...
+    def __call__(self, input: pd.DataFrame) -> pd.DataFrame: ...
+
+
+class PostProcess:                       # 可选
+    def __init__(self, args): ...
+    def __call__(self, input: pd.DataFrame) -> pd.DataFrame: ...
+```
+
+规则：
+- `__init__` 整次运行只调一次（适合模型加载、状态分配）
+- `__call__` 每个输入文件调一次（这一行对操作语义很重要）
+- 必须返回 DataFrame；返回 `None` 或其他类型会触发警告并沿用上一阶段输出
+- DataFrame 形状按文件扩展名分派：
+
+  | 扩展名 | 列 |
+  |---|---|
+  | `.jsonl` / `.csv` | 文件自身字段 |
+  | `.parquet` | 文件自身字段 + 系统注入 `file_path` + `file_name` |
+  | 其他 | 单行 `file_path` + `file_name` |
+
+- **同一 `obs_input/` 禁止混合上述类型** —— runner 会立即报错。多模态请改用模式二
+- mock 模式下，最终各文件返回的 DataFrame 会被汇总写入 `obs_output/result.jsonl`（仅本地约定，平台由框架决定输出位置）
+
+### 模式二 — auto-data-loading: false
+
+输入是空 DataFrame；算子自行从 `args.obs_input_path` 读、写回 `args.obs_output_path`，**无返回值**。
+
+```python
+class Process:
+    def __init__(self, args):
+        self.args = args
+
+    def __call__(self, input: pd.DataFrame):
+        import moxing as mox
+        for f in mox.file.list_directory(self.args.obs_input_path):
+            # 自行处理 OBS I/O
+            ...
+```
+
+适用：多模态数据集、需要整集输入（如去重）、输出非标准模态。
+
+## args 对象
+
+`__init__(self, args)` 收到的 `args` 是 argparse Namespace，包含：
+
+- `args.obs_input_path` / `args.obs_output_path` —— 框架注入的 OBS 路径
+- `manifest.yml > arguments` 中声明的业务参数（按 `key` 字段挂到 `args` 上；本地用 `default` 值，平台用用户在 UI 中填写的值）
+
+例如 manifest 里有 `arguments: [{key: threshold, type: FLOAT, default: 0.5}]`，运行时 `args.threshold == 0.5`。
+
+## OBS 访问（moxing.file）
+
+```python
+import moxing as mox
+
+mox.file.copy("obs://input/a.jpg", "obs://output/a.jpg")
+mox.file.copy_parallel("obs://input/dir/", "obs://output/dir/")
+mox.file.list_directory("obs://input/", recursive=True)
+mox.file.read("obs://input/a.txt")              # 返回 str
+mox.file.read("obs://input/a.bin", binary=True) # 返回 bytes
+mox.file.write("obs://output/b.txt", "...")
+with mox.file.File("obs://input/x", "r") as f:  # 类似 open()
+    ...
+# 其余：append / exists / is_directory / make_dirs / mk_dir /
+#       remove / rename / glob / walk / stat / get_size / scan_dir
+```
+
+本地 mock 把 `obs://input/` 映射到 `obs_input/`、`obs://output/` 映射到 `obs_output/`。**其他 bucket 名会立即报错** —— 本地只在这两条路径上保证等价。
+
+## 日志
+
+用 `ma_utils.FileLogger.get_logger()`，**不要**用 stdlib `logging.basicConfig` —— 平台日志收集依赖 FileLogger 的格式与目标。本地 mock 提供等价的 logger。
+
+```python
+import ma_utils as utils
+logger = utils.FileLogger.get_logger()
+logger.info("...")
+```
 
 ## 常用命令
-- 本地调试（mock OBS）：aishipbox op run
-- 本地调试（真实 OBS）：aishipbox op run --obs
-- 启动调试：           aishipbox op run --debug   （配合 VS Code "Attach to Op Service"）
-- 打包：               aishipbox op pack
+
+```bash
+aishipbox op run                 # 本地 mock 模式（默认）
+aishipbox op run --obs           # 真实 OBS（先填 .env）
+aishipbox op run --debug         # 等 VS Code 在端口 5678 附加
+aishipbox op debug               # 生成 .vscode/launch.json（"Attach to Op Service"）
+aishipbox op pack                # 打 program_package/<id>.tar
+```
+
+修改 `manifest.yml` 或新增依赖后必须重新 `pack`。
+
+## 依赖
+
+平台基础镜像预装 ~250 个常用包（pandas/numpy/torch/transformers/datasets/pyarrow/opencv-python/pillow/moxing-framework 等）。只在 `program_package/dependency/requirements.txt` 列出额外依赖。
+
+已钉死的版本（**勿改**，本地 = 平台等价的关键）：
+
+```
+pandas==1.3.5
+numpy==1.26.4
+pyarrow==18.0.0
+```
+
+需要无法从 PyPI 取的包：把 `.whl` 放进 `program_package/dependency/`，把安装命令写到 `install.sh`（基于 `install.sh.example`）。平台会执行：
+
+```bash
+pip install --no-index --find-links=./dependency -r ./dependency/requirements.txt
+```
 
 ## 关键约束
-- 算子通过 moxing 访问 OBS；本地默认 mock 到 obs_input/、obs_output/。
-- 修改 manifest.yml 后请重新 pack。
-- 不要修改 .aishipbox.toml 的 schema_version 与 type 字段。
+
+- 算子通过 `moxing` / `ma_utils` 访问平台基础设施；本地 mock 与平台等价
+- 修改 `manifest.yml` 后请重新 `pack`
+- 不要修改 `.aishipbox.toml` 的 `schema_version` 与 `type` 字段
+- 不要把 pandas/numpy/pyarrow 的钉死版本升级到 2.x —— 平台是 1.x，会运行时 break
 
 ## 平台参考
-- 算子手册：https://support.huaweicloud.com/usermanual-pangulm/pangulm_04_0043.html
+
+- 算子开发手册：https://support.huaweicloud.com/usermanual-pangulm/pangulm_04_0043.html
+- 算子配置文件规范：https://support.huaweicloud.com/usermanual-pangulm/pangulm_04_0044.html
+- MoXing API：https://support.huaweicloud.com/usermanual-standard-modelarts/modelarts_11_0001.html
