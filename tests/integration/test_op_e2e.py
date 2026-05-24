@@ -167,6 +167,91 @@ def test_op_mode1_per_file_invocation(tmp_path, require_python):
     assert [r["n"] for r in rows] == [1, 2, 3]
 
 
+def test_op_mode1_jsonl_input_exposes_file_columns(tmp_path, require_python):
+    """JSONL inputs: framework passes each file's records as the DataFrame
+    with the file's own columns (not file_path/file_name)."""
+    require_python("3.10")
+    if not shutil.which("uv"):
+        pytest.skip("uv not available")
+
+    r = _run(
+        "op", "new", "jsonl_op",
+        "--dir", str(tmp_path),
+        "--yes",
+        "--id", "jsonl_op", "--op-name", "jsonl", "--version", "0.0.1",
+        "--category", "数据转换", "--modal", "TEXT", "--cpu-arch", "ARM",
+        "--cpu", "1", "--memory", "2048", "--npu", "0",
+        "--auto-data-loading=true", "--skeleton", "blank",
+    )
+    assert r.returncode == 0, r.stderr
+
+    project = tmp_path / "jsonl_op"
+    (project / "program_package" / "process.py").write_text(
+        "class Process:\n"
+        "    def __init__(self, args): pass\n"
+        "    def __call__(self, df):\n"
+        "        assert list(df.columns) == ['id', 'text'], f'got {list(df.columns)}'\n"
+        "        df = df.copy(); df['n_chars'] = df['text'].str.len(); return df\n",
+        encoding="utf-8",
+    )
+    (project / "obs_input" / "samples.jsonl").write_text(
+        '{"id": 1, "text": "hello"}\n{"id": 2, "text": "world!"}\n',
+        encoding="utf-8",
+    )
+
+    r = _run("op", "run", cwd=project)
+    assert r.returncode == 0, r.stderr
+
+    import json as _json
+    rows = [_json.loads(l) for l in (project / "obs_output" / "result.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert rows == [
+        {"id": 1, "text": "hello", "n_chars": 5},
+        {"id": 2, "text": "world!", "n_chars": 6},
+    ]
+
+
+def test_op_mode1_csv_input_exposes_file_columns(tmp_path, require_python):
+    """CSV inputs: same per-file shape as JSONL — file's own columns."""
+    require_python("3.10")
+    if not shutil.which("uv"):
+        pytest.skip("uv not available")
+
+    r = _run(
+        "op", "new", "csv_op",
+        "--dir", str(tmp_path),
+        "--yes",
+        "--id", "csv_op", "--op-name", "csv", "--version", "0.0.1",
+        "--category", "数据转换", "--modal", "TEXT", "--cpu-arch", "ARM",
+        "--cpu", "1", "--memory", "2048", "--npu", "0",
+        "--auto-data-loading=true", "--skeleton", "blank",
+    )
+    assert r.returncode == 0, r.stderr
+
+    project = tmp_path / "csv_op"
+    (project / "program_package" / "process.py").write_text(
+        "class Process:\n"
+        "    def __init__(self, args): pass\n"
+        "    def __call__(self, df):\n"
+        "        assert list(df.columns) == ['name', 'score'], f'got {list(df.columns)}'\n"
+        "        df = df.copy(); df['rank'] = df['score'].rank(ascending=False).astype(int); return df\n",
+        encoding="utf-8",
+    )
+    (project / "obs_input" / "scores.csv").write_text(
+        "name,score\nalice,90\nbob,75\n",
+        encoding="utf-8",
+    )
+
+    r = _run("op", "run", cwd=project)
+    assert r.returncode == 0, r.stderr
+
+    import json as _json
+    rows = [_json.loads(l) for l in (project / "obs_output" / "result.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert rows == [
+        {"name": "alice", "score": 90, "rank": 1},
+        {"name": "bob", "score": 75, "rank": 2},
+    ]
+
+
 def test_op_mode1_dataframe_chain(tmp_path, require_python):
     """auto-data-loading=true: framework builds a DataFrame of obs_input files
     and chains it through PreProcess -> Process -> PostProcess. Each stage

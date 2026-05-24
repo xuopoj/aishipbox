@@ -7,11 +7,14 @@ allocate state). The PreProcess/Process/PostProcess chain is then invoked
 once per input file in Mode 1 — per the spec, "每个文件调用一次算子".
 
 Mode 1 (auto-data-loading=true):
-  For each file under AISHIPBOX_OBS_INPUT, builds a single-row DataFrame with
-  columns `file_path` (absolute local path) and `file_name` (relative path),
-  runs it through the chain, and collects the returned DataFrame. Per-file
-  results are concatenated and written to AISHIPBOX_OBS_OUTPUT/result.jsonl
-  as a mock-only sink (the platform decides the real output location).
+  For each file under AISHIPBOX_OBS_INPUT, builds a per-file DataFrame whose
+  shape depends on the extension:
+    * .jsonl  → pd.read_json(lines=True); columns = file's own fields
+    * .csv    → pd.read_csv;              columns = file's own fields
+    * other   → 1-row DataFrame with `file_path` + `file_name`
+  Runs each through the chain, then concats and writes to
+  AISHIPBOX_OBS_OUTPUT/result.jsonl as a mock-only sink (the platform decides
+  the real output location).
 
 Mode 2 (auto-data-loading=false):
   Calls each class once with an empty DataFrame. Classes do their own OBS I/O.
@@ -97,8 +100,7 @@ def main() -> int:
         file_dfs = _build_input_file_dfs(pd)
         logger.info("发现 %d 个输入文件，将逐个调用算子链", len(file_dfs))
         results = []
-        for file_df in file_dfs:
-            file_name = file_df.iloc[0]["file_name"]
+        for file_name, file_df in file_dfs:
             df = file_df
             for cls_name in CLASS_ORDER:
                 inst = instances.get(cls_name)
@@ -134,14 +136,34 @@ def _build_input_file_dfs(pd):
         logger.warning("输入目录不存在：%s", root)
         return []
 
-    dfs = []
+    pairs = []
     for p in sorted(root.rglob("*")):
-        if p.is_file():
-            dfs.append(pd.DataFrame(
-                [{"file_path": str(p.resolve()), "file_name": str(p.relative_to(root))}],
-                columns=["file_path", "file_name"],
-            ))
-    return dfs
+        if not p.is_file():
+            continue
+        df = _read_file_as_df(pd, p, root)
+        if df is not None:
+            pairs.append((str(p.relative_to(root)), df))
+    return pairs
+
+
+def _read_file_as_df(pd, p, root):
+    ext = p.suffix.lower()
+    if ext == ".jsonl":
+        try:
+            return pd.read_json(p, lines=True)
+        except ValueError as e:
+            logger.warning("读取 jsonl 失败 %s：%s", p, e)
+            return None
+    if ext == ".csv":
+        try:
+            return pd.read_csv(p)
+        except Exception as e:
+            logger.warning("读取 csv 失败 %s：%s", p, e)
+            return None
+    return pd.DataFrame(
+        [{"file_path": str(p.resolve()), "file_name": str(p.relative_to(root))}],
+        columns=["file_path", "file_name"],
+    )
 
 
 def _write_output_df(pd, df) -> None:
