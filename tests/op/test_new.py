@@ -1,3 +1,4 @@
+from aishipbox.core.config import PLATFORM_PRESET_PINS
 from aishipbox.op.commands import new as new_cmd
 
 
@@ -44,6 +45,19 @@ def test_new_yes_full_flags_creates_project(tmp_path, monkeypatch):
     assert install_example.exists()
     assert "find-links=./dependency" in install_example.read_text(encoding="utf-8")
     assert not (project / "program_package" / "install.sh").exists()
+
+    # The shipped requirements.txt must NOT list any platform-preinstalled
+    # package. Listing them would force the platform's `pip install --no-index`
+    # to look for wheels in the empty dependency/ dir and fail.
+    req_text = (project / "program_package" / "dependency" / "requirements.txt").read_text(encoding="utf-8")
+    req_pkgs = [
+        l.strip().split("==")[0].split(">=")[0].split("<")[0]
+        for l in req_text.splitlines()
+        if l.strip() and not l.strip().startswith("#")
+    ]
+    preset_names = {p.split("==")[0] for p in PLATFORM_PRESET_PINS}
+    leaked = preset_names & set(req_pkgs)
+    assert not leaked, f"platform-preinstalled packages leaked into shipped requirements.txt: {leaked}"
 
 
 def test_new_yes_missing_required_errors(tmp_path):

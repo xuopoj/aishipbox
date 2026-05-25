@@ -139,28 +139,30 @@ aishipbox op pack                # 打 program_package/<id>.tar
 
 ## 依赖
 
-平台基础镜像预装 ~250 个常用包（pandas/numpy/torch/transformers/datasets/pyarrow/opencv-python/pillow/moxing-framework 等）。只在 `program_package/dependency/requirements.txt` 列出额外依赖。
+平台基础镜像预装约 250 个常用包（pandas/numpy/torch/transformers/datasets/pyarrow/opencv-python/pillow/moxing-framework 等）。
 
-已钉死的版本（**勿改**，本地 = 平台等价的关键）：
-
-```
-pandas==1.3.5
-numpy==1.26.4
-pyarrow==18.0.0
-```
-
-需要无法从 PyPI 取的包：把 `.whl` 放进 `program_package/dependency/`，把安装命令写到 `install.sh`（基于 `install.sh.example`）。平台会执行：
+**`program_package/dependency/requirements.txt` 只列额外依赖** —— 这个文件随 `op pack` 打入算子包，平台运行时执行：
 
 ```bash
 pip install --no-index --find-links=./dependency -r ./dependency/requirements.txt
 ```
+
+`--no-index` 意味着 pip 只能从 `./dependency/` 找 wheel，不能上 PyPI。所以：
+- **不要**把已预置的包（pandas/numpy/pyarrow/...）写进 `requirements.txt`
+- 平台版本如果漂移，pip 找不到 wheel 就会断
+- 平台预置版本由 `aishipbox op new` 在本地自动安装到 `.venv/`（见 aishipbox 仓库 `core/config.py` 的 `PLATFORM_PRESET_PINS`），保证本地 = 平台等价
+
+要新加平台没有的依赖：
+1. 写到 `requirements.txt`（带版本号）
+2. 把对应 `.whl` 放进 `dependency/`，或在 `install.sh` 里写更复杂的安装步骤
+3. 重新 `op pack`
 
 ## 关键约束
 
 - 算子通过 `moxing` / `ma_utils` 访问平台基础设施；本地 mock 与平台等价
 - 修改 `manifest.yml` 后请重新 `pack`
 - 不要修改 `.aishipbox.toml` 的 `schema_version` 与 `type` 字段
-- 不要把 pandas/numpy/pyarrow 的钉死版本升级到 2.x —— 平台是 1.x，会运行时 break
+- 不要把平台预置包（pandas/numpy/pyarrow/...）写进 `requirements.txt` —— 会让平台 pip 失败
 
 ## 平台参考
 

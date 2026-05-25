@@ -9,7 +9,12 @@ from typing import Any, Dict, Optional
 
 from aishipbox import __version__
 from aishipbox.core import strings
-from aishipbox.core.config import HOSTED_RUNTIMES, ProjectConfig, write_project_config
+from aishipbox.core.config import (
+    HOSTED_RUNTIMES,
+    PLATFORM_PRESET_PINS,
+    ProjectConfig,
+    write_project_config,
+)
 from aishipbox.core.venv import provision_venv, pip_install
 from aishipbox.op import wizard
 from aishipbox.op.manifest import Manifest, ManifestError, Resource, render_manifest
@@ -108,6 +113,13 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
 
 def _provision_and_install(project_dir: Path) -> None:
     provision_venv(project_dir, HOSTED_RUNTIMES["op"])
+    # Mirror the platform image's preinstalled versions into the local venv
+    # so the dev environment matches what the operator runs against.
+    # NOT added to program_package/dependency/requirements.txt — that file
+    # ships to the platform via `op pack`, and listing already-preinstalled
+    # packages would force pip to find wheels in the empty dependency dir.
+    pip_install(project_dir, *PLATFORM_PRESET_PINS)
+
     req = project_dir / "program_package" / "dependency" / "requirements.txt"
     content = req.read_text(encoding="utf-8")
     pkgs = [l.strip() for l in content.splitlines() if l.strip() and not l.strip().startswith("#")]

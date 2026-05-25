@@ -92,7 +92,7 @@ aishipbox op new my_op --yes \
 - **`ma_utils.FileLogger.get_logger()`** — 平台标准日志入口，本地返回配置好格式的 stdlib logger
 - **路径解析**：`obs://input/` → `obs_input/`，`obs://output/` → `obs_output/`；**其他 bucket 名**会立即报错（只在两条 mock 路径上保证等价）
 
-新建项目的 `program_package/dependency/requirements.txt` 把 `pandas==1.3.5` / `numpy==1.26.4` / `pyarrow==18.0.0` 钉死到平台基础镜像版本，避免本地通过、平台失败的 API 差异（pandas 1.3 ↔ 2.x、numpy 1 ↔ 2 都有真实破坏性变更）。
+为了避免 "本地通过、平台失败" 的 API 差异（pandas 1.3 ↔ 2.x、numpy 1 ↔ 2 都有真实破坏性变更），`aishipbox op new` 在新建项目时把平台预置的 `pandas==1.3.5` / `numpy==1.26.4` / `pyarrow==18.0.0` 装到本地 `.venv/`。这些版本来自 `aishipbox/core/config.py` 的 `PLATFORM_PRESET_PINS` 常量，**不会**写进 `program_package/dependency/requirements.txt` —— 那个文件会被打入算子包，平台 `pip install --no-index` 不应该被要求重装已预置的包。
 
 ## 项目结构
 

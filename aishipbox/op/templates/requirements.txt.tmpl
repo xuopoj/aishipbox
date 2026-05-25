@@ -1,16 +1,16 @@
-# 算子运行所需依赖（仅列出未预置的包；平台基础镜像已预装 pandas / numpy / torch /
-# moxing-framework / opencv-python / PyYAML 等约 250 个常用包）。
-#
-# 若依赖无法从 PyPI 获取，可将 .whl 放在本目录（program_package/dependency/），
-# 平台运行时会执行：
+# 此文件随 op pack 一起打入算子包，平台运行时会执行：
 #   pip install --no-index --find-links=./dependency -r ./dependency/requirements.txt
 #
-# 平台运行时已预置；这里列出仅为本地虚拟环境可运行 process.py。
-# 版本严格对齐平台基础镜像，避免 pandas 2.x / numpy 2.x 等 API 差异导致
-# 本地通过但平台运行失败。
-pandas==1.3.5
-numpy==1.26.4
-pyarrow==18.0.0
+# 因此只列出平台基础镜像未预置的依赖。平台已预装约 250 个常用包，包括：
+#   pandas / numpy / pyarrow / torch / transformers / datasets /
+#   moxing-framework / opencv-python / pillow / ...
+# 这些包不要写在这里 —— 否则 pip 会试图从空的 dependency/ 找 wheel 而失败
+# （即便偶尔通过 "Requirement already satisfied"，平台镜像版本一旦漂移就会断）。
+#
+# 平台预置版本会被 `aishipbox op new` 自动装到本地 .venv 里以保证本地 = 平台
+# 等价（见 aishipbox/core/config.py 的 PLATFORM_PRESET_PINS）。
+#
+# 若依赖无法从 PyPI 获取，把 .whl 放在 dependency/，把额外安装命令写到 install.sh。
 
 # 示例（额外依赖）：
 # pillow==10.4.0
