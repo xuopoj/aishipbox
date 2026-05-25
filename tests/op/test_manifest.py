@@ -261,6 +261,23 @@ def test_validate_argument_boolean_ok():
     }]).validate()
 
 
+def test_validate_argument_boolean_without_items_rejects():
+    with pytest.raises(ManifestError, match="items"):
+        _minimal(arguments=[{
+            "key": "k", "name": "n", "type": "BOOLEAN",
+            "default": False,
+        }]).validate()
+
+
+def test_validate_argument_boolean_items_missing_value_rejects():
+    with pytest.raises(ManifestError, match="name 和 value"):
+        _minimal(arguments=[{
+            "key": "k", "name": "n", "type": "BOOLEAN",
+            "items": [{"name": "是"}, {"name": "否", "value": False}],
+            "default": False,
+        }]).validate()
+
+
 def test_validate_argument_obs_ok():
     _minimal(arguments=[{
         "key": "k", "name": "n", "type": "OBS",

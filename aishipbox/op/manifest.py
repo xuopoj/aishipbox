@@ -23,7 +23,7 @@ VALID_ARG_TYPES = {
     "STRING", "FLOAT", "INT", "ENUM", "LIST", "OBS", "BOOLEAN", "DYNAMIC_INPUT_LIST",
 }
 NUMERIC_ARG_TYPES = {"INT", "FLOAT"}
-ITEMS_ARG_TYPES = {"ENUM", "LIST"}
+ITEMS_ARG_TYPES = {"ENUM", "LIST", "BOOLEAN"}
 
 
 class ManifestError(Exception):
