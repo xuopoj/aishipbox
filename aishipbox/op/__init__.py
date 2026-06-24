@@ -49,12 +49,16 @@ def dispatch(argv: List[str]) -> int:
     p_debug = sub.add_parser("debug", help="生成 VS Code 调试配置")
     p_debug.add_argument("path", nargs="?", default=".")
 
+    p_download = sub.add_parser("download", help="下载依赖 wheel 并写入 requirements.txt")
+    p_download.add_argument("package")
+    p_download.add_argument("path", nargs="?", default=".")
+
     try:
         args = parser.parse_args(argv)
     except SystemExit as e:
         return int(e.code) if e.code is not None else 2
 
-    from aishipbox.op.commands import new, run, pack, debug
+    from aishipbox.op.commands import new, run, pack, debug, dep
 
     if args.cmd == "new":
         flags: Dict[str, Any] = {}
@@ -82,4 +86,6 @@ def dispatch(argv: List[str]) -> int:
         return pack.execute(args.path, output=args.output, force=args.force)
     if args.cmd == "debug":
         return debug.execute(args.path)
+    if args.cmd == "download":
+        return dep.execute(args.path, args.package)
     return 2

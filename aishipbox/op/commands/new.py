@@ -15,6 +15,7 @@ from aishipbox.core.config import (
     ProjectConfig,
     write_project_config,
 )
+from aishipbox.core.ui import stdin_is_interactive
 from aishipbox.core.venv import provision_venv, pip_install
 from aishipbox.op import wizard
 from aishipbox.op.manifest import Manifest, ManifestError, Resource, render_manifest
@@ -39,6 +40,11 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
             print(strings.MISSING_FLAGS_FOR_YES.format(fields=", ".join(missing)))
             return 2
         fields = flags
+    elif not stdin_is_interactive():
+        print(strings.NON_INTERACTIVE_NO_WIZARD.format(
+            example=f"aishipbox op new {name} --yes --id ... --version ... --category ... --modal ... [...]"
+        ))
+        return 2
     else:
         fields = wizard.run_wizard(default_id=name)
         fields.update(flags)

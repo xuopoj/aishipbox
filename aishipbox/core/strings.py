@@ -5,6 +5,10 @@ PROJECT_NOT_FOUND = "当前目录不是 aishipbox 项目（找不到 .aishipbox.
 PROJECT_TYPE_MISMATCH = "项目类型不匹配：检测到 {detected}，但当前命令需要 {expected}。"
 TARGET_DIR_EXISTS = "目标目录已存在：{path}"
 MISSING_FLAGS_FOR_YES = "使用 --yes 时缺少以下字段：{fields}"
+NON_INTERACTIVE_NO_WIZARD = (
+    "检测到非交互式环境，无法运行向导。\n"
+    "请改用非交互模式并提供必填参数，例如：\n  {example}"
+)
 MANIFEST_INVALID = "manifest.yml 校验失败："
 OBS_CREDS_MISSING = "缺少 OBS 配置，请在 .env 中设置：{fields}"
 PACK_OUTPUT_EXISTS = "输出文件已存在：{path}，使用 --force 覆盖。"
@@ -39,5 +43,5 @@ OP_SKELETON_TRANSFORM = "transform  - 含 moxing 数据转换示例"
 
 OP_CATEGORIES = ["数据提取", "数据抽样", "数据转换", "数据过滤", "数据去重", "数据打标", "其他"]
 OP_MODALS = ["TEXT", "IMAGE", "VIDEO", "AUDIO", "OTHER"]
-OP_CPU_ARCHES = ["ARM"]
+OP_CPU_ARCHES = ["ARM", "X86"]
 OP_XPU_DEVICES = ["SNT9B"]

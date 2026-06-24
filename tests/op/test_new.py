@@ -68,3 +68,40 @@ def test_new_yes_missing_required_errors(tmp_path):
         yes=True,
     )
     assert rc == 2
+
+
+def test_new_non_interactive_without_yes_errors_without_prompting(tmp_path, monkeypatch, capsys):
+    # No --yes and a non-TTY environment: must error with guidance, never prompt.
+    monkeypatch.setattr("aishipbox.op.commands.new.stdin_is_interactive", lambda: False)
+    monkeypatch.setattr(
+        "aishipbox.op.commands.new.wizard.run_wizard",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("wizard must not run in non-TTY")),
+    )
+
+    rc = new_cmd.execute(name="my_op", parent_dir=str(tmp_path), flags={}, yes=False)
+    assert rc == 2
+    out = capsys.readouterr().out
+    assert "非交互" in out
+    assert "--yes" in out
+    assert not (tmp_path / "my_op").exists()
+
+
+def test_new_interactive_tty_runs_wizard(tmp_path, monkeypatch):
+    # TTY + no --yes: wizard runs as before.
+    monkeypatch.setattr("aishipbox.op.commands.new.stdin_is_interactive", lambda: True)
+    monkeypatch.setattr("aishipbox.op.commands.new._provision_and_install", lambda *a, **k: None)
+    called = {}
+
+    def fake_wizard(default_id):
+        called["ran"] = True
+        return {
+            "id": "my_op", "name": "示例", "version": "0.0.1",
+            "category": "数据转换", "modal": ["IMAGE"], "format": [], "language": ["zh"],
+            "cpu_arch": ["ARM"], "cpu": 1, "memory": 2048, "npu": 0,
+            "auto_data_loading": False, "skeleton": "transform",
+        }
+    monkeypatch.setattr("aishipbox.op.commands.new.wizard.run_wizard", fake_wizard)
+
+    rc = new_cmd.execute(name="my_op", parent_dir=str(tmp_path), flags={}, yes=False)
+    assert rc == 0
+    assert called.get("ran") is True

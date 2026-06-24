@@ -132,6 +132,7 @@ aishipbox op run                 # 本地 mock 模式（默认）
 aishipbox op run --obs           # 真实 OBS（先填 .env）
 aishipbox op run --debug         # 等 VS Code 在端口 5678 附加
 aishipbox op debug               # 生成 .vscode/launch.json（"Attach to Op Service"）
+aishipbox op download <package>  # 下载依赖 wheel 到 dependency/，写入 requirements.txt
 aishipbox op pack                # 打 program_package/<id>.tar
 ```
 
@@ -152,10 +153,12 @@ pip install --no-index --find-links=./dependency -r ./dependency/requirements.tx
 - 平台版本如果漂移，pip 找不到 wheel 就会断
 - 平台预置版本由 `aishipbox op new` 在本地自动安装到 `.venv/`（见 aishipbox 仓库 `core/config.py` 的 `PLATFORM_PRESET_PINS`），保证本地 = 平台等价
 
-要新加平台没有的依赖：
-1. 写到 `requirements.txt`（带版本号）
-2. 把对应 `.whl` 放进 `dependency/`，或在 `install.sh` 里写更复杂的安装步骤
+要新加平台没有的依赖，推荐用 `aishipbox op download <package>`：
+1. 按 `manifest.yml > runtime > cpu-arch` 解析出的架构（`ARM`→`manylinux2014_aarch64`，`X86`→`manylinux2014_x86_64`），下载对应 Linux + Python 3.10 wheel 到 `dependency/`（**不下载依赖的依赖**，即 `--no-deps`，避免传递依赖把已预置包带进包里）
+2. 自动把解析出的 `<package>==<version>` 写入/更新 `requirements.txt`
 3. 重新 `op pack`
+
+也可以手动操作：把 `.whl` 放进 `dependency/`，对应行写进 `requirements.txt`，或在 `install.sh` 里写更复杂的安装步骤。
 
 ## 关键约束
 
@@ -163,6 +166,112 @@ pip install --no-index --find-links=./dependency -r ./dependency/requirements.tx
 - 修改 `manifest.yml` 后请重新 `pack`
 - 不要修改 `.aishipbox.toml` 的 `schema_version` 与 `type` 字段
 - 不要把平台预置包（pandas/numpy/pyarrow/...）写进 `requirements.txt` —— 会让平台 pip 失败
+
+## manifest.yml 完整字段规范
+
+以下字段由 aishipbox 在 `aishipbox op pack` 前用同一套规则校验（见 aishipbox 仓库 `op/manifest.py`），不符合规范会直接报错并列出全部问题。
+
+### 顶层字段
+
+| 字段 | 必填 | 规则 |
+|---|---|---|
+| `id` | 是 | 英文字母开头，仅含英文字母/数字/下划线；≤128 字符；创建后不可变 |
+| `name` | 是 | 显示名；≤128 字符 |
+| `description` | 否 | ≤2000 字符 |
+| `author` | 否 | ≤128 字符 |
+| `version` | 是 | 必须是 `x.y.z` 格式 |
+| `tags.language` | 是 | ISO 639-1 代码数组，如 `zh` / `en` |
+| `tags.format` | 否 | 文件格式数组：`JSONL` / `TXT` / `CSV` / `HTML` / `MP4` / `AVI` / `DOCX` / `PDF` / `EPUB` / `MOBI` / `BACKFLOW` 等 |
+| `tags.category` | 是 | 单选，仅限：`数据提取` / `数据抽样` / `数据转换` / `数据过滤` / `数据去重` / `数据打标` / `其他` |
+| `tags.modal` | 是 | 数组，仅限：`TEXT` / `IMAGE` / `VIDEO` / `AUDIO` / `OTHER` |
+| `tags.custom` | 否 | 自定义标签数组；每项 ≤32 字符 |
+
+### runtime
+
+| 字段 | 必填 | 规则 |
+|---|---|---|
+| `runtime.cpu-arch` | 是 | 数组，仅支持 `ARM` / `X86` |
+| `runtime.xpu-devices` | 条件必填 | 任一 `resources[].npu > 0` 时必填，仅支持 `SNT9B` |
+| `runtime.environment` | 固定 | `python`（由 aishipbox 生成，不要手改） |
+| `runtime.entrypoint` | 固定 | `process.py`（由 aishipbox 生成，不要手改） |
+| `runtime.auto-data-loading` | 是 | `true`/`false`，见上文两种模式 |
+| `runtime.resources` | 是 | 至少一项；每项 `cpu` ≥1、`memory` ≥1（MB）、`npu` ≥0（默认 0） |
+
+### arguments（业务参数，可选数组）
+
+| 字段 | 必填 | 规则 |
+|---|---|---|
+| `key` | 是 | 算子内唯一；≤128 字符；运行时挂到 `args.<key>` |
+| `name` | 是 | 显示名 |
+| `type` | 是 | `STRING` / `FLOAT` / `INT` / `ENUM` / `LIST` / `OBS` / `BOOLEAN` / `DYNAMIC_INPUT_LIST` |
+| `tips` | 否 | 帮助文本；≤2000 字符 |
+| `between` | `INT`/`FLOAT` 必填 | 是否为范围参数（true/false），必须显式声明 |
+| `min` / `max` | 条件 | 数值类型的边界，必须是数字 |
+| `items` | `ENUM`/`LIST`/`BOOLEAN` 必填 | 至少一项，每项含 `name` 和 `value` |
+| `required` | 否 | 默认 false |
+| `visible` | 否 | 前端是否展示；默认 false |
+| `default` | 条件 | `visible=false` 且 `required=true` 时必填；`between=true` 时格式为 `"min;max"` |
+
+类型示例：
+
+```yaml
+# 数值范围（between=true）
+- key: clip_duration
+  name: 片段时长范围
+  type: FLOAT
+  between: true
+  min: 0.1
+  max: 600.0
+  default: "1.0;300.0"   # "min;max"
+
+# 单选枚举
+- key: font_conversion
+  name: 字体转换
+  type: ENUM
+  between: false
+  items:
+    - {name: 简体, value: simplified}
+    - {name: 繁体, value: traditional}
+  default: simplified
+
+# 多选列表
+- key: resolution
+  name: 分辨率
+  type: LIST
+  items:
+    - {name: SD, value: SD}
+    - {name: HD, value: HD}
+  default: "SD,HD"        # 逗号分隔
+```
+
+运行时 `args.<key>` 取值：本地 mock 用 manifest 里的 `default`；平台用用户在 UI 里实际填写的值。
+
+### labels（输出打标字段，可选数组，仅打标类算子需要）
+
+| 字段 | 必填 | 规则 |
+|---|---|---|
+| `key` / `name` | 是 | 标签标识 / 显示名 |
+| `type` | 是 | `STRING` / `NUMERIC` / `ENUM` / `OBJECT` |
+| `min` / `max` | `NUMERIC` 必填 | 数值范围 |
+| `items` | `ENUM` 必填 | 至少一项，每项含 `name` + `value` |
+| `dimensions` | `OBJECT` 必填 | 至少一项；每项含 `key` + `name` + `type`（`STRING`/`NUMERIC`/`ENUM`），`NUMERIC` 需 `min`/`max`，`ENUM` 需 `items` |
+
+```yaml
+labels:
+  - key: quality_score
+    name: 质量分
+    type: NUMERIC
+    min: 0.0
+    max: 100.0
+  - key: detailed_analysis
+    name: 详细分析
+    type: OBJECT
+    dimensions:
+      - {key: sentiment, name: 情感, type: ENUM, items: [{name: 正面, value: positive}]}
+      - {key: confidence, name: 置信度, type: NUMERIC, min: 0.0, max: 1.0}
+```
+
+修改 `arguments` / `labels` / `runtime` 后，跑一次 `aishipbox op pack` 即可看到 manifest 校验报错（如果有）—— 不需要单独跑 lint。
 
 ## 平台参考
 

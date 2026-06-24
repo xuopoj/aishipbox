@@ -10,6 +10,7 @@ from typing import Optional
 from aishipbox import __version__
 from aishipbox.core import strings
 from aishipbox.core.config import HOSTED_RUNTIMES, ProjectConfig, write_project_config
+from aishipbox.core.ui import stdin_is_interactive
 from aishipbox.core.venv import provision_venv, pip_install
 
 
@@ -35,6 +36,11 @@ def execute(name: str, parent_dir: str, template: Optional[str] = None, yes: boo
     if template is None:
         if yes:
             template = "basic"
+        elif not stdin_is_interactive():
+            print(strings.NON_INTERACTIVE_NO_WIZARD.format(
+                example=f"aishipbox algo new {name} --yes -t basic"
+            ))
+            return 2
         else:
             template = _prompt_template()
     if template not in TEMPLATES:

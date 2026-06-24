@@ -51,6 +51,7 @@ aishipbox op run                            # mock 模式（默认）
 aishipbox op run --obs                      # 真实 OBS（读取 .env）
 aishipbox op run --debug                    # 等 VS Code 在端口 5678 附加
 aishipbox op debug                          # 生成 .vscode/launch.json
+aishipbox op download <package>             # 下载依赖 wheel 到 dependency/，写入 requirements.txt
 aishipbox op pack                           # 打 program_package/<id>.tar
 ```
 
@@ -93,6 +94,16 @@ aishipbox op new my_op --yes \
 - **路径解析**：`obs://input/` → `obs_input/`，`obs://output/` → `obs_output/`；**其他 bucket 名**会立即报错（只在两条 mock 路径上保证等价）
 
 为了避免 "本地通过、平台失败" 的 API 差异（pandas 1.3 ↔ 2.x、numpy 1 ↔ 2 都有真实破坏性变更），`aishipbox op new` 在新建项目时把平台预置的 `pandas==1.3.5` / `numpy==1.26.4` / `pyarrow==18.0.0` 装到本地 `.venv/`。这些版本来自 `aishipbox/core/config.py` 的 `PLATFORM_PRESET_PINS` 常量，**不会**写进 `program_package/dependency/requirements.txt` —— 那个文件会被打入算子包，平台 `pip install --no-index` 不应该被要求重装已预置的包。
+
+## 依赖下载
+
+`aishipbox op download <package>` 下载单个包的 wheel（不含其依赖的依赖，`--no-deps`）到 `program_package/dependency/`，并自动把解析出的版本写入 `requirements.txt`：
+
+```bash
+aishipbox op download requests
+```
+
+按 `manifest.yml > runtime > cpu-arch` 选择目标平台（`ARM` → `manylinux2014_aarch64`，`X86` → `manylinux2014_x86_64`），固定 Python 3.10（op 托管运行时），与开发机平台无关 —— 在 macOS/Windows 上也能下到正确的 Linux wheel。平台预置包（`PLATFORM_PRESET_PINS`）会被拒绝下载。
 
 ## 项目结构
 

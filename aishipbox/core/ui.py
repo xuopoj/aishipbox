@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import questionary
 
 from aishipbox.core import strings
+
+
+def stdin_is_interactive() -> bool:
+    """True only when stdin is an attached TTY (so prompting won't hang)."""
+    return sys.stdin is not None and sys.stdin.isatty()
 
 
 FieldSpec = Union[type, Tuple[type, Any]]

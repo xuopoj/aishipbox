@@ -122,6 +122,10 @@ def test_validate_x86_cpu_arch_rejects():
         _minimal(cpu_arch=["x86"]).validate()
 
 
+def test_validate_uppercase_x86_cpu_arch_accepts():
+    _minimal(cpu_arch=["X86"]).validate()
+
+
 def test_validate_npu_without_xpu_rejects():
     with pytest.raises(ManifestError):
         _minimal(resources=[Resource(cpu=24, memory=196608, npu=1)], xpu_devices=[]).validate()

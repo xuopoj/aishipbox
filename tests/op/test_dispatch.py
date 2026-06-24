@@ -32,3 +32,18 @@ def test_dispatch_routes_to_new_with_yes(monkeypatch):
 
 def test_dispatch_unknown_command():
     assert op.dispatch(["bogus"]) == 2
+
+
+def test_dispatch_routes_to_download(monkeypatch):
+    captured = {}
+
+    def fake_execute(path, package):
+        captured["path"] = path
+        captured["package"] = package
+        return 0
+    monkeypatch.setattr("aishipbox.op.commands.dep.execute", fake_execute)
+
+    rc = op.dispatch(["download", "requests"])
+    assert rc == 0
+    assert captured["package"] == "requests"
+    assert captured["path"] == "."

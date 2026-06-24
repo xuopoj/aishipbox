@@ -14,7 +14,7 @@ VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 ID_MAX_LEN = 128
 VALID_MODALS = {"TEXT", "IMAGE", "VIDEO", "AUDIO", "OTHER"}
-VALID_CPU_ARCHES = {"ARM"}
+VALID_CPU_ARCHES = {"ARM", "X86"}
 VALID_XPU_DEVICES = {"SNT9B"}
 VALID_CATEGORIES = {"数据提取", "数据抽样", "数据转换", "数据过滤", "数据去重", "数据打标", "其他"}
 VALID_LABEL_TYPES = {"STRING", "NUMERIC", "ENUM", "OBJECT"}
@@ -78,7 +78,7 @@ class Manifest:
             errs.append(f"非法 category：{self.category}")
         for a in self.cpu_arch:
             if a not in VALID_CPU_ARCHES:
-                errs.append(f"非法 cpu-arch：{a}（仅支持 ARM）")
+                errs.append(f"非法 cpu-arch：{a}（仅支持 ARM / X86）")
         for x in self.xpu_devices:
             if x not in VALID_XPU_DEVICES:
                 errs.append(f"非法 xpu-device：{x}（仅支持 SNT9B）")
