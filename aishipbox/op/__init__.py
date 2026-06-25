@@ -61,6 +61,10 @@ def dispatch(argv: List[str]) -> int:
                        help="代码骨架：blank=空白 / transform=含 moxing 拷贝示例；默认 transform")
     p_new.add_argument("--yes", action="store_true",
                        help="非交互模式：跳过向导，未提供的字段用默认值填充")
+    p_new.add_argument("--native-tls", dest="native_tls", action="store_true",
+                       help="创建 venv 时让 uv 改用系统证书库；公司代理/自签名证书导致下载解释器失败时加上")
+    p_new.add_argument("--insecure", action="store_true",
+                       help="创建 venv 时跳过 TLS 证书校验下载解释器（不安全，有中间人风险，仅在可信网络下使用）")
 
     p_run = sub.add_parser(
         "run", help="本地运行算子",
@@ -119,7 +123,8 @@ def dispatch(argv: List[str]) -> int:
         if args.npu is not None: flags["npu"] = args.npu
         if args.auto_data_loading is not None: flags["auto_data_loading"] = args.auto_data_loading
         if args.skeleton is not None: flags["skeleton"] = args.skeleton
-        return new.execute(args.name, args.dir, flags=flags, yes=args.yes)
+        return new.execute(args.name, args.dir, flags=flags, yes=args.yes,
+                           native_tls=args.native_tls, insecure=args.insecure)
 
     if args.cmd == "run":
         return run.execute(args.path, obs=args.obs, debug=args.debug, debug_port=args.debug_port)

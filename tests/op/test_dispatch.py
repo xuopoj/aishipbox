@@ -42,7 +42,7 @@ def test_op_download_help_documents_behavior(capsys):
 def test_dispatch_routes_to_new_with_yes(monkeypatch):
     captured = {}
 
-    def fake_execute(name, parent_dir, flags=None, yes=False):
+    def fake_execute(name, parent_dir, flags=None, yes=False, native_tls=False, insecure=False):
         captured["name"] = name
         captured["yes"] = yes
         captured["flags"] = flags

@@ -1,6 +1,18 @@
 """User-facing strings (Chinese). Single source for future i18n."""
 
 UV_NOT_FOUND = "未找到 uv 命令，请先安装 uv：https://github.com/astral-sh/uv"
+VENV_DOWNLOAD_TLS_FAILED = (
+    "创建虚拟环境失败：uv 在下载 Python {version} 解释器时网络/证书校验出错。\n"
+    "  原始错误：{detail}\n"
+    "常见于公司代理或自签名证书环境。可任选其一解决：\n"
+    "  1. 加 --native-tls 重试（让 uv 改用系统证书库，通常已含公司代理 CA），例如：\n"
+    "     aishipbox op new <name> --native-tls\n"
+    "  2. 自行安装 Python {version}（如 pyenv / 系统包管理器），uv 会复用本机解释器、无需下载；\n"
+    "  3. 指定可信 CA 证书：export SSL_CERT_FILE=/path/to/ca-bundle.pem 后重试；\n"
+    "  4. 实在不行可加 --insecure 跳过证书校验（不安全，有中间人风险，仅在可信网络下使用）。"
+)
+VENV_INSECURE_WARNING = "⚠️  已启用 --insecure：跳过 TLS 证书校验下载解释器，存在中间人风险，请仅在可信网络下使用。"
+VENV_PROVISION_FAILED = "创建项目虚拟环境失败，已清理目录 {path}。\n{detail}"
 PROJECT_NOT_FOUND = "当前目录不是 aishipbox 项目（找不到 .aishipbox.toml）。请先运行 `aishipbox <op|algo> new`。"
 PROJECT_TYPE_MISMATCH = "项目类型不匹配：检测到 {detected}，但当前命令需要 {expected}。"
 TARGET_DIR_EXISTS = "目标目录已存在：{path}"

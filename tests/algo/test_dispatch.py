@@ -3,7 +3,7 @@ from aishipbox import algo
 
 def test_dispatch_routes_to_new(monkeypatch):
     called = {}
-    def fake_execute(name, parent_dir, template=None, yes=False):
+    def fake_execute(name, parent_dir, template=None, yes=False, native_tls=False, insecure=False):
         called["name"] = name
         called["template"] = template
         return 0

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from importlib import resources
 from pathlib import Path
 from string import Template
@@ -16,7 +17,7 @@ from aishipbox.core.config import (
     write_project_config,
 )
 from aishipbox.core.ui import stdin_is_interactive
-from aishipbox.core.venv import provision_venv, pip_install
+from aishipbox.core.venv import provision_venv, pip_install, VenvError
 from aishipbox.op import wizard
 from aishipbox.op.manifest import Manifest, ManifestError, Resource, render_manifest
 
@@ -41,7 +42,8 @@ def _default_fields(name: str) -> Dict[str, Any]:
     }
 
 
-def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, yes: bool = False) -> int:
+def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None,
+            yes: bool = False, native_tls: bool = False, insecure: bool = False) -> int:
     flags = dict(flags or {})
     project_dir = Path(parent_dir).resolve() / name
     if project_dir.exists():
@@ -115,7 +117,14 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
 
     write_project_config(project_dir, ProjectConfig(type="op", runtime=HOSTED_RUNTIMES["op"]))
 
-    _provision_and_install(project_dir)
+    if insecure:
+        print(strings.VENV_INSECURE_WARNING)
+    try:
+        _provision_and_install(project_dir, native_tls=native_tls, insecure=insecure)
+    except VenvError as e:
+        shutil.rmtree(project_dir, ignore_errors=True)
+        print(strings.VENV_PROVISION_FAILED.format(path=project_dir, detail=e))
+        return 1
 
     print(f"\n算子已创建：{project_dir}")
     print(f"\n{strings.NEXT_STEPS_HEADER}")
@@ -127,8 +136,8 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
     return 0
 
 
-def _provision_and_install(project_dir: Path) -> None:
-    provision_venv(project_dir, HOSTED_RUNTIMES["op"])
+def _provision_and_install(project_dir: Path, native_tls: bool = False, insecure: bool = False) -> None:
+    provision_venv(project_dir, HOSTED_RUNTIMES["op"], native_tls=native_tls, insecure=insecure)
     # Mirror the platform image's preinstalled versions into the local venv
     # so the dev environment matches what the operator runs against.
     # NOT added to program_package/dependency/requirements.txt — that file

@@ -37,16 +37,37 @@ def python_executable(project_dir: Path) -> Path:
     return py
 
 
-def provision_venv(project_dir: Path, python_version: str) -> Path:
+_TLS_DOWNLOAD_MARKERS = (
+    "invalid peer certificate",
+    "UnknownIssuer",
+    "Failed to download",
+    "error sending request",
+)
+
+
+# Hosts uv reaches when downloading a managed CPython interpreter.
+_INTERPRETER_DOWNLOAD_HOSTS = ("github.com", "objects.githubusercontent.com", "astral.sh")
+
+
+def provision_venv(project_dir: Path, python_version: str,
+                   native_tls: bool = False, insecure: bool = False) -> Path:
     uv = require_uv()
     venv_dir = Path(project_dir) / ".venv"
-    result = subprocess.run(
-        [uv, "venv", "--python", python_version, str(venv_dir)],
-        capture_output=True,
-        text=True,
-    )
+    cmd = [uv, "venv", "--python", python_version]
+    if native_tls:
+        cmd.append("--native-tls")
+    if insecure:
+        for host in _INTERPRETER_DOWNLOAD_HOSTS:
+            cmd += ["--allow-insecure-host", host]
+    cmd.append(str(venv_dir))
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        raise VenvError(f"uv venv 失败：{result.stderr.strip()}")
+        detail = result.stderr.strip()
+        if not (native_tls or insecure) and any(m in detail for m in _TLS_DOWNLOAD_MARKERS):
+            raise VenvError(
+                strings.VENV_DOWNLOAD_TLS_FAILED.format(version=python_version, detail=detail)
+            )
+        raise VenvError(f"uv venv 失败：{detail}")
     return venv_dir
 
 

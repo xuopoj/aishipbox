@@ -15,6 +15,10 @@ def dispatch(argv: List[str]) -> int:
     p_new.add_argument("-d", "--dir", default=".")
     p_new.add_argument("-t", "--template", choices=["basic", "predict", "cv"])
     p_new.add_argument("--yes", action="store_true")
+    p_new.add_argument("--native-tls", dest="native_tls", action="store_true",
+                       help="创建 venv 时让 uv 改用系统证书库；公司代理/自签名证书导致下载解释器失败时加上")
+    p_new.add_argument("--insecure", action="store_true",
+                       help="创建 venv 时跳过 TLS 证书校验下载解释器（不安全，有中间人风险，仅在可信网络下使用）")
 
     p_run = sub.add_parser("run", help="本地运行算法服务")
     p_run.add_argument("path", nargs="?", default=".")
@@ -44,7 +48,8 @@ def dispatch(argv: List[str]) -> int:
     from aishipbox.algo.commands import new, run, pack, debug, stubs, install_deps
 
     if args.cmd == "new":
-        return new.execute(args.name, args.dir, args.template, args.yes)
+        return new.execute(args.name, args.dir, args.template, args.yes,
+                           native_tls=args.native_tls, insecure=args.insecure)
     if args.cmd == "run":
         return run.execute(args.path, args.host, args.port, args.debug, args.debug_port)
     if args.cmd == "pack":

@@ -1,5 +1,43 @@
 from aishipbox.core.config import PLATFORM_PRESET_PINS
+from aishipbox.core.venv import VenvError
 from aishipbox.op.commands import new as new_cmd
+
+
+def _full_flags():
+    return {
+        "id": "my_op", "name": "示例算子", "description": "demo", "author": "tester",
+        "version": "0.0.1", "category": "数据转换", "modal": ["IMAGE"], "format": ["JPG"],
+        "language": ["zh"], "cpu_arch": ["ARM"], "cpu": 1, "memory": 2048, "npu": 0,
+        "auto_data_loading": False, "skeleton": "transform",
+    }
+
+
+def test_new_venv_failure_cleans_up_and_no_traceback(tmp_path, monkeypatch, capsys):
+    def boom(*a, **k):
+        raise VenvError("uv venv 失败：invalid peer certificate: UnknownIssuer")
+    monkeypatch.setattr("aishipbox.op.commands.new._provision_and_install", boom)
+
+    rc = new_cmd.execute(name="my_op", parent_dir=str(tmp_path), flags=_full_flags(), yes=True)
+
+    assert rc == 1                                    # clean non-zero, not a crash
+    assert not (tmp_path / "my_op").exists()          # half-created dir removed
+    out = capsys.readouterr().out
+    assert "UnknownIssuer" in out                     # surfaced the cause to the user
+
+
+def test_new_threads_native_tls_to_provisioning(tmp_path, monkeypatch):
+    seen = {}
+
+    def fake_provision(project_dir, native_tls=False, insecure=False):
+        seen["native_tls"] = native_tls
+        seen["insecure"] = insecure
+    monkeypatch.setattr("aishipbox.op.commands.new._provision_and_install", fake_provision)
+
+    rc = new_cmd.execute(
+        name="my_op", parent_dir=str(tmp_path), flags=_full_flags(), yes=True, native_tls=True,
+    )
+    assert rc == 0
+    assert seen["native_tls"] is True
 
 
 def test_new_yes_full_flags_creates_project(tmp_path, monkeypatch):
