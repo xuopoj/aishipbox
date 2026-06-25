@@ -166,7 +166,31 @@ aishipbox op pack [path]           # 打包成 program_package/<id>.tar
 
 `path` 默认当前目录；命令多在算子项目根目录内执行。
 
-### 3.1 op new —— 新建项目
+### 3.1 安装
+
+aishipbox 把 **uv** 作为硬性运行时依赖（建 venv、装依赖、跑工具本身都通过 uv），所以先装 uv：
+
+```bash
+# macOS / Linux：官方独立脚本，无需预装 Python
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+其他平台（Windows / Homebrew / pip 等）见 [uv 官方安装文档](https://docs.astral.sh/uv/getting-started/installation/)。装完**新开一个终端**让 PATH 生效。
+
+再装 aishipbox：
+
+```bash
+uv tool install aishipbox                    # 从 PyPI
+```
+
+更新已安装的工具：
+
+```bash
+uv tool install --reinstall aishipbox        # 从 PyPI
+uv tool install --reinstall .                # 从当前源码（dev）
+```
+
+### 3.2 op new —— 新建项目
 
 **交互式（人工首次使用）：**
 
@@ -205,11 +229,11 @@ my_op/
 └── .venv/                            # Python 3.10（已装好平台预置的 pandas/numpy/pyarrow）
 ```
 
-### 3.2 实现算子
+### 3.3 实现算子
 
 编辑 `program_package/process.py`，按第 2.2 / 2.3 节的接口定义实现 `Process`（及可选的 Pre/PostProcess）。先 `cat manifest.yml` 确认当前是模式一还是模式二。
 
-### 3.3 op run —— 本地运行与 mock
+### 3.4 op run —— 本地运行与 mock
 
 ```bash
 cd my_op
@@ -230,7 +254,7 @@ cp .env.example .env              # 填 OBS_AK/SK/ENDPOINT/INPUT_PATH/OUTPUT_PAT
 aishipbox op run --obs
 ```
 
-### 3.4 op debug —— 断点调试
+### 3.5 op debug —— 断点调试
 
 ```bash
 aishipbox op debug                # 生成 .vscode/launch.json（"Attach to Op Service"）
@@ -239,7 +263,7 @@ aishipbox op run --debug          # 启动后等 VS Code 在 5678 端口附加
 
 在 VS Code 选 "Attach to Op Service" 即可命中 `process.py` 断点。
 
-### 3.5 op download —— 添加依赖
+### 3.6 op download —— 添加依赖
 
 只有平台**没有**的包才需要打进算子包。`op download` 自动处理跨平台 wheel：
 
@@ -254,7 +278,7 @@ aishipbox op download requests
 - 可重复执行（幂等），多架构会各下一份并校验版本一致。
 - 无法从 PyPI 获取的依赖：手动放 `.whl` 进 `dependency/`，复杂步骤写进 `install.sh`（参考 `install.sh.example`）。
 
-### 3.6 op pack —— 打包
+### 3.7 op pack —— 打包
 
 ```bash
 aishipbox op pack                 # → program_package/<id>.tar
