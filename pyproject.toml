@@ -1,6 +1,6 @@
 [project]
 name = "aishipbox"
-version = "0.1.0"
+version = "0.1.1"
 description = "ModelArts Studio 自定义数据加工算子开发 CLI"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -11,6 +11,11 @@ dependencies = [
     "debugpy>=1.8.0",
     "tomli>=2.0.0; python_version < '3.11'",
 ]
+
+[project.urls]
+Homepage = "https://github.com/xuopoj/aishipbox"
+Repository = "https://github.com/xuopoj/aishipbox"
+Issues = "https://github.com/xuopoj/aishipbox/issues"
 
 [project.scripts]
 aishipbox = "aishipbox.cli:main"
