@@ -2,8 +2,7 @@
 
 UV_NOT_FOUND = "未找到 uv 命令，请先安装 uv：https://github.com/astral-sh/uv"
 VENV_DOWNLOAD_TLS_FAILED = (
-    "创建虚拟环境失败：uv 在下载 Python {version} 解释器时网络/证书校验出错。\n"
-    "  原始错误：{detail}\n"
+    "创建虚拟环境失败：uv 在下载 Python {version} 解释器时网络/证书校验出错（详见上方 uv 输出）。\n"
     "常见于公司代理或自签名证书环境。可任选其一解决：\n"
     "  1. 加 --native-tls 重试（让 uv 改用系统证书库，通常已含公司代理 CA），例如：\n"
     "     aishipbox op new <name> --native-tls\n"

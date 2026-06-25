@@ -5,9 +5,26 @@ from __future__ import annotations
 import platform
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+from typing import List, Tuple
 
 from aishipbox.core import strings
+
+
+def _run_uv(cmd: List[str]) -> Tuple[int, str]:
+    """Run a uv command, streaming its stderr live to the terminal while also
+    capturing it. uv writes progress bars and errors to stderr; streaming keeps
+    the user informed during slow downloads, capturing lets callers inspect the
+    failure reason. Returns (returncode, captured_stderr)."""
+    proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, text=True)
+    lines = []
+    for line in proc.stderr:
+        sys.stderr.write(line)
+        sys.stderr.flush()
+        lines.append(line)
+    proc.wait()
+    return proc.returncode, "".join(lines).strip()
 
 
 class VenvError(Exception):
@@ -60,23 +77,20 @@ def provision_venv(project_dir: Path, python_version: str,
         for host in _INTERPRETER_DOWNLOAD_HOSTS:
             cmd += ["--allow-insecure-host", host]
     cmd.append(str(venv_dir))
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        detail = result.stderr.strip()
+    returncode, detail = _run_uv(cmd)
+    if returncode != 0:
+        # uv's stderr already streamed live above; surface a concise summary
+        # (TLS detection still inspects the captured detail).
         if not (native_tls or insecure) and any(m in detail for m in _TLS_DOWNLOAD_MARKERS):
-            raise VenvError(
-                strings.VENV_DOWNLOAD_TLS_FAILED.format(version=python_version, detail=detail)
-            )
-        raise VenvError(f"uv venv 失败：{detail}")
+            raise VenvError(strings.VENV_DOWNLOAD_TLS_FAILED.format(version=python_version))
+        raise VenvError("uv venv 失败（详见上方 uv 输出）。")
     return venv_dir
 
 
 def pip_install(project_dir: Path, *packages: str) -> None:
     uv = require_uv()
-    result = subprocess.run(
-        [uv, "pip", "install", "--python", str(python_executable(project_dir)), *packages],
-        capture_output=True,
-        text=True,
+    returncode, _ = _run_uv(
+        [uv, "pip", "install", "--python", str(python_executable(project_dir)), *packages]
     )
-    if result.returncode != 0:
-        raise VenvError(f"uv pip install 失败：{result.stderr.strip()}")
+    if returncode != 0:
+        raise VenvError("uv pip install 失败（详见上方 uv 输出）。")
