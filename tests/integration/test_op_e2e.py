@@ -244,11 +244,15 @@ def test_op_mode1_csv_input_exposes_file_columns(tmp_path, require_python):
     r = _run("op", "run", cwd=project)
     assert r.returncode == 0, r.stderr
 
-    import json as _json
-    rows = [_json.loads(l) for l in (project / "obs_output" / "result.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    # Output format mirrors input: csv input → result.csv (not result.jsonl).
+    result = project / "obs_output" / "result.csv"
+    assert result.exists(), r.stdout + r.stderr
+    assert not (project / "obs_output" / "result.jsonl").exists()
+    import csv as _csv
+    rows = list(_csv.DictReader(result.read_text(encoding="utf-8").splitlines()))
     assert rows == [
-        {"name": "alice", "score": 90, "rank": 1},
-        {"name": "bob", "score": 75, "rank": 2},
+        {"name": "alice", "score": "90", "rank": "1"},
+        {"name": "bob", "score": "75", "rank": "2"},
     ]
 
 
@@ -298,8 +302,20 @@ def test_op_mode1_parquet_input_injects_system_columns(tmp_path, require_python)
     r = _run("op", "run", cwd=project)
     assert r.returncode == 0, r.stderr
 
+    # Output format mirrors input: parquet input → result.parquet (not result.jsonl).
+    result = project / "obs_output" / "result.parquet"
+    assert result.exists(), r.stdout + r.stderr
+    assert not (project / "obs_output" / "result.jsonl").exists()
+    # Read result.parquet back via the project venv (it has pyarrow; dev venv may not).
+    read_script = (
+        "import pandas as pd, json\n"
+        f"df = pd.read_parquet(r'{result}')\n"
+        "print(json.dumps(df.to_dict(orient='records')))\n"
+    )
+    rr = subprocess.run([str(project_py), "-c", read_script], capture_output=True, text=True)
+    assert rr.returncode == 0, rr.stderr
     import json as _json
-    rows = [_json.loads(l) for l in (project / "obs_output" / "result.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    rows = _json.loads(rr.stdout)
     assert len(rows) == 2
     assert {r["image_id"]: r["caption_upper"] for r in rows} == {1: "CAT", 2: "DOG"}
     # System columns present in output rows.

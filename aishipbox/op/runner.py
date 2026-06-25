@@ -14,8 +14,9 @@ Mode 1 (auto-data-loading=true):
     * .parquet → pd.read_parquet + system file_path/file_name columns injected
     * other    → 1-row DataFrame with `file_path` + `file_name`
   Runs each through the chain, then concats and writes to
-  AISHIPBOX_OBS_OUTPUT/result.jsonl as a mock-only sink (the platform decides
-  the real output location).
+  AISHIPBOX_OBS_OUTPUT/result.<ext> as a mock-only sink, where <ext> mirrors
+  the input type (csv→csv, parquet→parquet, else jsonl). The platform decides
+  the real output location and format.
 
 Mode 2 (auto-data-loading=false):
   Calls each class once with an empty DataFrame. Classes do their own OBS I/O.
@@ -105,6 +106,8 @@ def main() -> int:
             logger.error("%s", e)
             return 1
         logger.info("发现 %d 个输入文件，将逐个调用算子链", len(file_dfs))
+        # 输出格式对齐输入格式：record 类输入已由 _check_input_uniformity 保证扩展名一致。
+        input_ext = Path(file_dfs[0][0]).suffix.lower() if file_dfs else ""
         results = []
         for file_name, file_df in file_dfs:
             df = file_df
@@ -123,7 +126,7 @@ def main() -> int:
                     )
             results.append(df)
         final_df = pd.concat(results, ignore_index=True) if results else pd.DataFrame()
-        _write_output_df(pd, final_df)
+        _write_output_df(pd, final_df, input_ext)
     else:
         df = pd.DataFrame()
         for cls_name in CLASS_ORDER:
@@ -204,7 +207,7 @@ def _read_file_as_df(pd, p, root):
     )
 
 
-def _write_output_df(pd, df) -> None:
+def _write_output_df(pd, df, input_ext="") -> None:
     if not isinstance(df, pd.DataFrame):
         return
     obs_output = os.environ.get("AISHIPBOX_OBS_OUTPUT")
@@ -212,8 +215,15 @@ def _write_output_df(pd, df) -> None:
         return
     out_dir = Path(obs_output)
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / "result.jsonl"
-    df.to_json(out_path, orient="records", lines=True, force_ascii=False)
+    # 本地 mock 输出格式对齐输入：csv→csv、parquet→parquet，其余（jsonl 及非 record 输入）→jsonl。
+    ext = input_ext if input_ext in (".csv", ".parquet") else ".jsonl"
+    out_path = out_dir / f"result{ext}"
+    if ext == ".csv":
+        df.to_csv(out_path, index=False)
+    elif ext == ".parquet":
+        df.to_parquet(out_path, index=False)
+    else:
+        df.to_json(out_path, orient="records", lines=True, force_ascii=False)
     logger.info("已写入 %s（%d 行）", out_path, len(df))
 
 
