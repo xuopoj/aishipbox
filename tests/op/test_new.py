@@ -60,14 +60,47 @@ def test_new_yes_full_flags_creates_project(tmp_path, monkeypatch):
     assert not leaked, f"platform-preinstalled packages leaked into shipped requirements.txt: {leaked}"
 
 
-def test_new_yes_missing_required_errors(tmp_path):
+def test_new_yes_no_flags_scaffolds_with_defaults(tmp_path, monkeypatch):
+    # --yes with no other flags must scaffold a valid project using defaults,
+    # so a coding agent can scaffold minimally and edit manifest.yml later.
+    monkeypatch.setattr("aishipbox.op.commands.new._provision_and_install", lambda *a, **k: None)
+
+    rc = new_cmd.execute(name="my_op", parent_dir=str(tmp_path), flags={}, yes=True)
+    assert rc == 0
+
+    project = tmp_path / "my_op"
+    assert (project / "manifest.yml").exists()
+    assert (project / "program_package" / "process.py").exists()
+
+    from aishipbox.op.manifest import load_manifest
+    m = load_manifest(project)
+    m.validate()  # defaults must produce a spec-valid manifest
+    assert m.id == "my_op"
+    assert m.version == "0.0.1"
+    assert m.category == "其他"
+    assert m.modal == ["OTHER"]
+    assert m.cpu_arch == ["ARM"]
+    assert m.auto_data_loading is False
+
+
+def test_new_yes_partial_flags_override_defaults(tmp_path, monkeypatch):
+    monkeypatch.setattr("aishipbox.op.commands.new._provision_and_install", lambda *a, **k: None)
+
     rc = new_cmd.execute(
         name="my_op",
         parent_dir=str(tmp_path),
-        flags={"id": "my_op"},
+        flags={"category": "数据转换", "modal": ["IMAGE"], "version": "1.2.3"},
         yes=True,
     )
-    assert rc == 2
+    assert rc == 0
+
+    from aishipbox.op.manifest import load_manifest
+    m = load_manifest(tmp_path / "my_op")
+    assert m.category == "数据转换"
+    assert m.modal == ["IMAGE"]
+    assert m.version == "1.2.3"
+    # unspecified fields still fall back to defaults
+    assert m.cpu_arch == ["ARM"]
 
 
 def test_new_non_interactive_without_yes_errors_without_prompting(tmp_path, monkeypatch, capsys):

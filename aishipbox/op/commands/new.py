@@ -21,10 +21,24 @@ from aishipbox.op import wizard
 from aishipbox.op.manifest import Manifest, ManifestError, Resource, render_manifest
 
 
-REQUIRED_FIELDS = (
-    "id", "name", "version", "category", "modal",
-    "cpu_arch", "cpu", "memory", "npu", "auto_data_loading", "skeleton",
-)
+def _default_fields(name: str) -> Dict[str, Any]:
+    """Defaults for `--yes` so a project scaffolds without every flag; an agent
+    can fill manifest.yml afterward. Mirror the wizard's offered defaults."""
+    return {
+        "id": name,
+        "name": name,
+        "version": "0.0.1",
+        "category": "其他",
+        "modal": ["OTHER"],
+        "format": [],
+        "language": ["zh"],
+        "cpu_arch": ["ARM"],
+        "cpu": 1,
+        "memory": 2048,
+        "npu": 0,
+        "auto_data_loading": False,
+        "skeleton": "transform",
+    }
 
 
 def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, yes: bool = False) -> int:
@@ -35,11 +49,7 @@ def execute(name: str, parent_dir: str, flags: Optional[Dict[str, Any]] = None, 
         return 1
 
     if yes:
-        missing = [f for f in REQUIRED_FIELDS if f not in flags]
-        if missing:
-            print(strings.MISSING_FLAGS_FOR_YES.format(fields=", ".join(missing)))
-            return 2
-        fields = flags
+        fields = {**_default_fields(name), **flags}
     elif not stdin_is_interactive():
         print(strings.NON_INTERACTIVE_NO_WIZARD.format(
             example=f"aishipbox op new {name} --yes --id ... --version ... --category ... --modal ... [...]"

@@ -14,44 +14,69 @@ def dispatch(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(prog="aishipbox op", description="自定义算子项目管理")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_new = sub.add_parser("new", help="新建算子项目")
-    p_new.add_argument("name")
-    p_new.add_argument("-d", "--dir", default=".")
-    p_new.add_argument("--id")
-    p_new.add_argument("--op-name", dest="op_name")
-    p_new.add_argument("--description", default="")
-    p_new.add_argument("--author", default="")
-    p_new.add_argument("--version")
-    p_new.add_argument("--category", default=None)
-    p_new.add_argument("--modal", action="append", default=None)
-    p_new.add_argument("--format", action="append", default=None)
-    p_new.add_argument("--language", action="append", default=None)
-    p_new.add_argument("--cpu-arch", action="append", default=None)
-    p_new.add_argument("--xpu-device", dest="xpu_devices", action="append", default=None)
-    p_new.add_argument("--cpu", type=int)
-    p_new.add_argument("--memory", type=int)
-    p_new.add_argument("--npu", type=int)
-    p_new.add_argument("--auto-data-loading", type=_str2bool, default=None)
-    p_new.add_argument("--skeleton", choices=["blank", "transform"])
-    p_new.add_argument("--yes", action="store_true")
+    p_new = sub.add_parser(
+        "new", help="新建算子项目",
+        description="新建算子项目。带 --yes 进入非交互模式，未提供的字段用默认值填充；"
+                    "不带 --yes 且无 TTY 时会报错而非卡住向导。",
+    )
+    p_new.add_argument("name", help="项目目录名（也作为 id/name 默认值）")
+    p_new.add_argument("-d", "--dir", default=".", help="父目录，默认当前目录")
+    p_new.add_argument("--id", help="算子 ID，英文字母开头/[A-Za-z0-9_]/≤128；默认=项目名")
+    p_new.add_argument("--op-name", dest="op_name", help="算子显示名；默认=项目名")
+    p_new.add_argument("--description", default="", help="算子描述")
+    p_new.add_argument("--author", default="", help="作者")
+    p_new.add_argument("--version", help="版本 x.y.z；默认 0.0.1")
+    p_new.add_argument("--category", default=None,
+                       help="类别（单选）：数据提取/数据抽样/数据转换/数据过滤/数据去重/数据打标/其他；默认 其他")
+    p_new.add_argument("--modal", action="append", default=None, metavar="MODAL",
+                       help="数据模态（可重复）：TEXT/IMAGE/VIDEO/AUDIO/OTHER；默认 OTHER")
+    p_new.add_argument("--format", action="append", default=None, help="数据格式（可重复），如 JPG/JSONL")
+    p_new.add_argument("--language", action="append", default=None, help="语言标签（可重复）；默认 zh")
+    p_new.add_argument("--cpu-arch", action="append", default=None, metavar="ARCH",
+                       help="CPU 架构（可重复，大小写敏感）：ARM 或 X86；默认 ARM")
+    p_new.add_argument("--xpu-device", dest="xpu_devices", action="append", default=None,
+                       help="XPU 设备（可重复），如 SNT9B；npu>0 时自动加")
+    p_new.add_argument("--cpu", type=int, help="CPU 核数 ≥1；默认 1")
+    p_new.add_argument("--memory", type=int, help="内存 MB ≥1；默认 2048")
+    p_new.add_argument("--npu", type=int, help="NPU 数量 ≥0；默认 0")
+    p_new.add_argument("--auto-data-loading", type=_str2bool, default=None, metavar="BOOL",
+                       help="true=框架按文件构造 DataFrame 逐文件调用；false=自行 OBS I/O；默认 false")
+    p_new.add_argument("--skeleton", choices=["blank", "transform"],
+                       help="代码骨架：blank=空白 / transform=含 moxing 拷贝示例；默认 transform")
+    p_new.add_argument("--yes", action="store_true",
+                       help="非交互模式：跳过向导，未提供的字段用默认值填充")
 
-    p_run = sub.add_parser("run", help="本地运行算子")
-    p_run.add_argument("path", nargs="?", default=".")
-    p_run.add_argument("--obs", action="store_true")
-    p_run.add_argument("--debug", action="store_true")
-    p_run.add_argument("--debug-port", type=int, default=5678)
+    p_run = sub.add_parser(
+        "run", help="本地运行算子",
+        description="在项目 venv 内本地运行算子。默认 mock 模式（obs://input|output → obs_input|output/）。",
+    )
+    p_run.add_argument("path", nargs="?", default=".", help="项目目录，默认当前目录")
+    p_run.add_argument("--obs", action="store_true", help="用真实 OBS 运行（读取 .env 凭据）")
+    p_run.add_argument("--debug", action="store_true", help="启动后等 VS Code 在 debug-port 附加")
+    p_run.add_argument("--debug-port", type=int, default=5678, help="debugpy 监听端口，默认 5678")
 
-    p_pack = sub.add_parser("pack", help="打包算子")
-    p_pack.add_argument("path", nargs="?", default=".")
-    p_pack.add_argument("-o", "--output")
-    p_pack.add_argument("--force", action="store_true")
+    p_pack = sub.add_parser(
+        "pack", help="打包算子",
+        description="校验 manifest/process.py 后打包成 program_package/<id>.tar（按 <id>/ 嵌套，未压缩）。",
+    )
+    p_pack.add_argument("path", nargs="?", default=".", help="项目目录，默认当前目录")
+    p_pack.add_argument("-o", "--output", help="输出路径，默认 program_package/<id>.tar")
+    p_pack.add_argument("--force", action="store_true", help="覆盖已存在的输出文件")
 
-    p_debug = sub.add_parser("debug", help="生成 VS Code 调试配置")
-    p_debug.add_argument("path", nargs="?", default=".")
+    p_debug = sub.add_parser(
+        "debug", help="生成 VS Code 调试配置",
+        description="生成 .vscode/launch.json（\"Attach to Op Service\"，配合 run --debug）。",
+    )
+    p_debug.add_argument("path", nargs="?", default=".", help="项目目录，默认当前目录")
 
-    p_download = sub.add_parser("download", help="下载依赖 wheel 并写入 requirements.txt")
-    p_download.add_argument("package")
-    p_download.add_argument("path", nargs="?", default=".")
+    p_download = sub.add_parser(
+        "download", help="下载依赖 wheel 并写入 requirements.txt",
+        description="下载单个包的 wheel（--no-deps，不含传递依赖）到 program_package/dependency/，"
+                    "按 manifest 的 cpu-arch 选 Linux+Python3.10 目标平台，并写入 requirements.txt。"
+                    "平台预置包（pandas/numpy/pyarrow）会被拒绝。",
+    )
+    p_download.add_argument("package", help="包名，可带版本约束，如 requests 或 pillow==10.4.0")
+    p_download.add_argument("path", nargs="?", default=".", help="项目目录，默认当前目录")
 
     try:
         args = parser.parse_args(argv)

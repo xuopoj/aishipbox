@@ -1,6 +1,32 @@
 from aishipbox import op
 
 
+def _help_text(argv, capsys):
+    # dispatch catches argparse's SystemExit and returns the exit code (0 for --help).
+    op.dispatch(argv)
+    return capsys.readouterr().out
+
+
+def test_op_help_lists_all_subcommands(capsys):
+    out = _help_text(["--help"], capsys)
+    for cmd in ("new", "run", "pack", "debug", "download"):
+        assert cmd in out
+
+
+def test_op_new_help_documents_flags_and_defaults(capsys):
+    out = _help_text(["new", "--help"], capsys)
+    # key flags carry human-readable descriptions
+    assert "ARM" in out and "X86" in out          # cpu-arch allowed values
+    assert "TEXT" in out or "IMAGE" in out         # modal allowed values
+    assert "默认" in out                            # defaults are shown
+    assert "向导" in out or "--yes" in out          # --yes behavior documented
+
+
+def test_op_download_help_documents_behavior(capsys):
+    out = _help_text(["download", "--help"], capsys)
+    assert "no-deps" in out or "依赖" in out
+
+
 def test_dispatch_routes_to_new_with_yes(monkeypatch):
     captured = {}
 

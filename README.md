@@ -1,10 +1,12 @@
 # aishipbox
 
-JAC PanguLM 算法服务（algo）与自定义算子（op）开发 CLI。
+ModelArts Studio 算法包服务（algo）与自定义算子（op）开发 CLI。
 
 把平台上线前后的本地等价开发环境收敛到一条命令链：脚手架、虚拟环境、本地 mock、调试、打包。
 
 ## 安装
+
+需要先装 [uv](https://docs.astral.sh/uv/)（本工具的硬性依赖）—— 安装方法见 [INSTALL_UV.md](INSTALL_UV.md)。
 
 ```bash
 uv tool install aishipbox
@@ -16,6 +18,10 @@ uv tool install aishipbox
 uv tool install --reinstall aishipbox        # 从 PyPI
 uv tool install --reinstall .                # 从当前源码（dev）
 ```
+
+## 使用指南
+
+- 算子（op）完整开发流程：[OP_USAGE.md](OP_USAGE.md) —— 新建 → 实现 → 本地 mock 调试 → 加依赖 → 打包，含交互式与 agent 非交互式两条路径
 
 ## 设计
 
@@ -55,15 +61,17 @@ aishipbox op download <package>             # 下载依赖 wheel 到 dependency/
 aishipbox op pack                           # 打 program_package/<id>.tar
 ```
 
-非交互向导（脚本/CI）：
+非交互模式（脚本/CI/coding agent）—— 带 `--yes` 即可，未提供的字段用默认值填充，scaffold 后再编辑 `manifest.yml`：
 
 ```bash
-aishipbox op new my_op --yes \
-  --id my_op --op-name 示例 --version 0.0.1 \
-  --category 数据转换 --modal IMAGE \
-  --cpu-arch ARM --cpu 1 --memory 2048 --npu 0 \
-  --auto-data-loading=false --skeleton transform
+aishipbox op new my_op --yes                    # 全默认，最省事
+aishipbox op new my_op --yes \                  # 也可只覆盖关心的字段
+  --category 数据转换 --modal IMAGE --auto-data-loading=true
 ```
+
+> 非交互环境下漏掉 `--yes` 会立即报错（而非卡在向导上），提示改用 `--yes`。
+
+> 📖 **算子完整开发流程见 [OP_USAGE.md](OP_USAGE.md)** —— 安装 → 新建 → 实现 → 本地 mock 调试 → 加依赖 → 打包，含交互式与 agent 非交互式两条路径。
 
 ## 算子两种模式
 

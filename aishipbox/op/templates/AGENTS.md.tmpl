@@ -125,18 +125,19 @@ logger = utils.FileLogger.get_logger()
 logger.info("...")
 ```
 
-## 常用命令
+## 命令
+
+子命令：`new` / `run` / `pack` / `debug` / `download`。**用法、参数、默认值以 `--help` 为准**（自带完整说明，按需查）：
 
 ```bash
-aishipbox op run                 # 本地 mock 模式（默认）
-aishipbox op run --obs           # 真实 OBS（先填 .env）
-aishipbox op run --debug         # 等 VS Code 在端口 5678 附加
-aishipbox op debug               # 生成 .vscode/launch.json（"Attach to Op Service"）
-aishipbox op download <package>  # 下载依赖 wheel 到 dependency/，写入 requirements.txt
-aishipbox op pack                # 打 program_package/<id>.tar
+aishipbox op --help              # 子命令总览
+aishipbox op <cmd> --help        # 某条命令的参数与默认值，如 aishipbox op run --help
 ```
 
-修改 `manifest.yml` 或新增依赖后必须重新 `pack`。
+常用：`op run`（本地 mock，默认）、`op run --obs`（真实 OBS，先填 .env）、`op run --debug` + `op debug`（VS Code 调试）、`op download <pkg>`（加依赖）、`op pack`（打包）。
+
+- **非交互环境必须带 `--yes`** 跑 `op new`（无 TTY 时不带会报错，不会卡向导）。
+- **修改 `manifest.yml` 或依赖后必须重新 `op pack`**（pack 自带 manifest 校验）。
 
 ## 依赖
 
