@@ -2,18 +2,51 @@
 
 本指南从概念到工具到 agent 协作，分四部分：
 
-1. [什么是自定义算子](#1-什么是自定义算子)
-2. [怎么构建自定义算子（平台契约）](#2-怎么构建自定义算子平台契约)
-3. [使用 aishipbox 构建算子](#3-使用-aishipbox-构建算子)
-4. [用 coding agent 配合 aishipbox 快速构建](#4-用-coding-agent-配合-aishipbox-快速构建)
+- [1. 什么是自定义算子](#1-什么是自定义算子)
+- [2. 怎么构建自定义算子（接口定义）](#2-怎么构建自定义算子接口定义)
+- [3. 使用 aishipbox 构建算子](#3-使用-aishipbox-构建算子)
+- [4. 用 coding agent 配合 aishipbox 快速构建](#4-用-coding-agent-配合-aishipbox-快速构建)
+- [端到端示例](#端到端示例)
+- [FAQ](#faq)
+- [参考](#参考)
 
-> 前置：先装好 uv 与 aishipbox，见 [INSTALL_UV.md](INSTALL_UV.md)，然后 `uv tool install aishipbox`。托管运行时为 **Python 3.10**。
+> 前置：先装好 uv（见 [uv 官方安装文档](https://docs.astral.sh/uv/getting-started/installation/)），然后 `uv tool install aishipbox`。托管运行时为 **Python 3.10**。
 
 ---
 
 ## 1. 什么是自定义算子
 
-自定义算子（custom operator）是 ModelArts Studio **数据集加工流水线**里的一个处理节点。平台把数据集按你声明的方式喂给算子，算子做一段处理（提取、抽样、转换、过滤、去重、打标……），产出加工后的数据。
+自定义算子（custom operator）是 ModelArts Studio **数据集加工**里的一个处理节点。平台把数据集按你声明的方式喂给算子，算子做一段处理（提取、抽样、转换、过滤、去重、打标……），产出加工后的数据。
+
+一条数据集加工流水线由**多个算子串联**而成：平台编排这些节点，上一个算子写到 OBS 的输出就是下一个算子的输入。
+
+```mermaid
+flowchart LR
+    DS["数据集<br/>（OBS）"] --> OP1["自定义算子 1<br/>如：过滤"]
+    OP1 -->|"OBS 输出 → 输入"| OP2["自定义算子 2<br/>如：转换"]
+    OP2 -->|"OBS 输出 → 输入"| OP3["自定义算子 3<br/>如：打标"]
+    OP3 --> OUT["加工后数据集<br/>（OBS）"]
+```
+
+> - 单个算子无法编排别的算子，"串联多个算子"是**平台流水线**的职责。本指南聚焦如何构建流水线里的**一个**自定义算子节点。
+> - **目前平台不支持内置算子与自定义算子混用**：同一条流水线要么全用内置算子，要么全用自定义算子。
+
+放大看其中一个节点：平台运行一个算子的大致生命周期：
+
+```mermaid
+flowchart TD
+    A["拉起托管容器（基于MA）<br/>Python 3.10 · ARM/X86<br/>基础镜像内置250 个预置包"] --> B["装额外依赖<br/>pip install --no-index<br/>--find-links=./dependency"]
+    B --> C["实例化算子链<br/>PreProcess / Process / PostProcess<br/>__init__ 整次运行只调一次"]
+    C --> D{"auto-data-loading?"}
+    D -->|"true（模式一）"| E["框架读 OBS 输入<br/>按文件类型构造 DataFrame<br/>逐文件喂入"]
+    E --> F["对每个文件依次调用<br/>PreProcess → Process → PostProcess"]
+    F --> G["收集 __call__ 返回的 DataFrame<br/>框架写回 OBS 输出"]
+    D -->|"false（模式二）"| H["框架传入空 DataFrame<br/>算子自行从 args.obs_input_path<br/>用 moxing 读 OBS"]
+    H --> I["整条算子链只调用一次<br/>PreProcess → Process → PostProcess（无逐文件循环）"]
+    I --> J["算子自行用 moxing<br/>写 args.obs_output_path"]
+    G --> K["输出落到 OBS<br/>进入下一个加工节点"]
+    J --> K
+```
 
 一个算子要回答三个问题：
 
@@ -23,13 +56,11 @@
 
 算子运行在平台托管的 Linux 容器里（**Python 3.10**，ARM 或 X86），通过 `moxing`（OBS 对象存储访问）和 `ma_utils`（日志）等平台 SDK 与基础设施交互。基础镜像预装约 250 个常用包（pandas/numpy/torch/transformers/pyarrow/opencv-python/pillow/moxing-framework 等）。
 
-**aishipbox 的作用**：把上述「写 manifest → 写实现 → 本地验证 → 打包」整条链路收敛成几条命令，并在本地用 mock 等价模拟平台的 `moxing` / `ma_utils` / OBS 路径，让你在上传前就能跑通。
-
 ---
 
 ## 2. 怎么构建自定义算子（接口定义）
 
-这一节讲**算子接口定义**，与具体工具无关。第 3 节再讲 aishipbox 如何把这些自动化。
+这一节讲**算子接口定义**。第 3 节再讲引入一个工具 aishipbox，把这些内容自动化。
 
 ### 2.1 manifest.yml —— 算子是什么
 
@@ -121,7 +152,7 @@ mox.file.write("obs://output/b.txt", "...")
 
 ## 3. 使用 aishipbox 构建算子
 
-aishipbox 把第 2 节的契约自动化。命令速查：
+aishipbox 把第 2 节的构建流程自动化。命令速查：
 
 ```bash
 aishipbox op new <name> [flags]    # 新建项目（脚手架 + venv + 预置包）
@@ -176,7 +207,7 @@ my_op/
 
 ### 3.2 实现算子
 
-编辑 `program_package/process.py`，按第 2.2 / 2.3 节的契约实现 `Process`（及可选的 Pre/PostProcess）。先 `cat manifest.yml` 确认当前是模式一还是模式二。
+编辑 `program_package/process.py`，按第 2.2 / 2.3 节的接口定义实现 `Process`（及可选的 Pre/PostProcess）。先 `cat manifest.yml` 确认当前是模式一还是模式二。
 
 ### 3.3 op run —— 本地运行与 mock
 
@@ -239,7 +270,7 @@ aishipbox op pack -o out.tar      # 指定输出路径
 
 ## 4. 用 coding agent 配合 aishipbox 快速构建
 
-aishipbox 专为 coding agent（Claude Code 等）协作设计：命令非交互友好（`--yes` 永不卡住），每个项目自带 `AGENTS.md` 作为 agent 的项目内操作手册（含完整 manifest 字段规范与约束）。
+aishipbox 也考虑和 coding agent（Claude Code 等）协作设计：命令非交互友好（`--yes` 永不卡住），每个项目自带 `AGENTS.md` 作为 agent 的项目内操作手册（含完整 manifest 字段规范与约束）。
 
 ### 4.1 分工：人起项目，agent 实现
 
@@ -315,12 +346,12 @@ aishipbox op pack                 # → program_package/img_copy.tar
 
 ---
 
-## 常见问题
+## FAQ
 
 - **向导卡住 / agent 无响应**：非交互环境忘了 `--yes`。补上即可（字段可省略走默认）。
 - **`op run` 报缺少 pandas**：模式一需要 pandas，`op new` 已装平台预置版本进 `.venv/`。若 `.venv` 损坏，重跑 `op new`（换名或先删项目），或手动 `uv venv --python 3.10 .venv` 后装回预置包。预置包不能用 `op download`（会被拒绝）。
 - **`其他 bucket 名报错`**：mock 只支持 `obs://input/` 和 `obs://output/`，其余路径用 `--obs` 连真实 OBS。
-- **平台装包失败**：检查是否把预置包写进了 `requirements.txt`，或 wheel 架构/Python 版本不匹配（用 `op download` 而非手动下载可避免）。
+- **平台装包失败**：检查是否把预置包写进了 `requirements.txt`，或 wheel 架构/Python 版本不匹配（建议用 `op download` 自动下载）。
 
 ## 参考
 

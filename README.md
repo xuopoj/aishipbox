@@ -6,7 +6,7 @@ ModelArts Studio 算法包服务（algo）与自定义算子（op）开发 CLI�
 
 ## 安装
 
-需要先装 [uv](https://docs.astral.sh/uv/)（本工具的硬性依赖）—— 安装方法见 [INSTALL_UV.md](INSTALL_UV.md)。
+需要先装 [uv](https://docs.astral.sh/uv/)（本工具的硬性依赖）—— 安装方法见 [uv 官方安装文档](https://docs.astral.sh/uv/getting-started/installation/)。
 
 ```bash
 uv tool install aishipbox
