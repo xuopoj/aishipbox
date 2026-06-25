@@ -16,7 +16,7 @@ def run_wizard(default_id: str) -> Dict[str, Any]:
     fields["version"] = ui.ask_text(strings.OP_FIELD_VERSION, default="0.0.1")
     fields["category"] = ui.ask_select(strings.OP_FIELD_CATEGORY, strings.OP_CATEGORIES, default="其他")
     fields["modal"] = ui.ask_checkbox(strings.OP_FIELD_MODAL, strings.OP_MODALS) or ["OTHER"]
-    fields["format"] = [s.strip() for s in ui.ask_text(strings.OP_FIELD_FORMAT, default="").split(",") if s.strip()]
+    fields["format"] = [s.strip() for s in ui.ask_text(strings.OP_FIELD_FORMAT, default="OTHER").split(",") if s.strip()] or ["OTHER"]
     fields["language"] = [s.strip() for s in ui.ask_text(strings.OP_FIELD_LANGUAGE, default="zh").split(",") if s.strip()]
     fields["cpu_arch"] = [ui.ask_select(strings.OP_FIELD_CPU_ARCH, strings.OP_CPU_ARCHES, default="ARM")]
     fields["cpu"] = int(ui.ask_text(strings.OP_FIELD_CPU, default="1"))

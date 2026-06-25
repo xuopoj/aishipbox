@@ -112,6 +112,15 @@ def test_validate_bad_category_rejects():
         _minimal(category="未知类别").validate()
 
 
+def test_validate_empty_format_rejects():
+    with pytest.raises(ManifestError):
+        _minimal(format=[]).validate()
+
+
+def test_validate_nonempty_format_accepts():
+    _minimal(format=["JSONL"]).validate()
+
+
 def test_validate_lowercase_cpu_arch_rejects():
     with pytest.raises(ManifestError):
         _minimal(cpu_arch=["arm"]).validate()

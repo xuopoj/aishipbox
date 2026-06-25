@@ -36,7 +36,7 @@
 声明元数据与可调参数。关键字段：
 
 - 顶层：`id`（英文字母开头、`[A-Za-z0-9_]`、≤128、创建后不可变）、`name`、`version`（`x.y.z`）、`description`、`author`。
-- `tags`：`category`（单选：数据提取/抽样/转换/过滤/去重/打标/其他）、`modal`（TEXT/IMAGE/VIDEO/AUDIO/OTHER）、`language`、`format`。
+- `tags`：`category`（单选：数据提取/抽样/转换/过滤/去重/打标/其他）、`modal`（TEXT/IMAGE/VIDEO/AUDIO/OTHER）、`format`（**必填，不能为空**，如 JSONL/CSV/MP4）、`language`。
 - `runtime`：`cpu-arch`（ARM / X86）、`resources`（cpu/memory/npu）、`environment: python`、`entrypoint: process.py`、`auto-data-loading`（见 2.3）。
 - `arguments`：业务参数（STRING/FLOAT/INT/ENUM/LIST/OBS/BOOLEAN…），运行时挂到 `args.<key>`。
 - `labels`：打标类算子的输出标签定义。
@@ -153,7 +153,7 @@ aishipbox op new my_op --yes \                                # 或只覆盖关�
   --category 数据转换 --modal IMAGE --auto-data-loading=false --skeleton transform
 ```
 
-字段默认值（与向导一致）：`id`/`name`=项目名、`version`=`0.0.1`、`category`=`其他`、`modal`=`[OTHER]`、`cpu-arch`=`[ARM]`、`cpu`=`1`、`memory`=`2048`、`npu`=`0`、`auto-data-loading`=`false`、`skeleton`=`transform`。可选值见项目内 `AGENTS.md`。
+字段默认值（与向导一致）：`id`/`name`=项目名、`version`=`0.0.1`、`category`=`其他`、`modal`=`[OTHER]`、`format`=`[OTHER]`、`cpu-arch`=`[ARM]`、`cpu`=`1`、`memory`=`2048`、`npu`=`0`、`auto-data-loading`=`false`、`skeleton`=`transform`。可选值见项目内 `AGENTS.md`。
 
 > 非交互环境（管道 / 无 TTY）下漏掉 `--yes` 不会卡在向导上 —— 会立即报错提示改用 `--yes`，退出码 `2`。
 

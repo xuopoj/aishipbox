@@ -30,7 +30,8 @@ def dispatch(argv: List[str]) -> int:
                        help="类别（单选）：数据提取/数据抽样/数据转换/数据过滤/数据去重/数据打标/其他；默认 其他")
     p_new.add_argument("--modal", action="append", default=None, metavar="MODAL",
                        help="数据模态（可重复）：TEXT/IMAGE/VIDEO/AUDIO/OTHER；默认 OTHER")
-    p_new.add_argument("--format", action="append", default=None, help="数据格式（可重复），如 JPG/JSONL")
+    p_new.add_argument("--format", action="append", default=None,
+                       help="数据格式（可重复，必填非空），如 JSONL/CSV/MP4；默认 OTHER")
     p_new.add_argument("--language", action="append", default=None, help="语言标签（可重复）；默认 zh")
     p_new.add_argument("--cpu-arch", action="append", default=None, metavar="ARCH",
                        help="CPU 架构（可重复，大小写敏感）：ARM 或 X86；默认 ARM")

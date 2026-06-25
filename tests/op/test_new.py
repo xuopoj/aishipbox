@@ -129,7 +129,7 @@ def test_new_interactive_tty_runs_wizard(tmp_path, monkeypatch):
         called["ran"] = True
         return {
             "id": "my_op", "name": "示例", "version": "0.0.1",
-            "category": "数据转换", "modal": ["IMAGE"], "format": [], "language": ["zh"],
+            "category": "数据转换", "modal": ["IMAGE"], "format": ["JSONL"], "language": ["zh"],
             "cpu_arch": ["ARM"], "cpu": 1, "memory": 2048, "npu": 0,
             "auto_data_loading": False, "skeleton": "transform",
         }

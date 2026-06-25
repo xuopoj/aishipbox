@@ -182,7 +182,7 @@ pip install --no-index --find-links=./dependency -r ./dependency/requirements.tx
 | `author` | 否 | ≤128 字符 |
 | `version` | 是 | 必须是 `x.y.z` 格式 |
 | `tags.language` | 是 | ISO 639-1 代码数组，如 `zh` / `en` |
-| `tags.format` | 否 | 文件格式数组：`JSONL` / `TXT` / `CSV` / `HTML` / `MP4` / `AVI` / `DOCX` / `PDF` / `EPUB` / `MOBI` / `BACKFLOW` 等 |
+| `tags.format` | 是 | 文件格式数组，**不能为空**：`JSONL` / `TXT` / `CSV` / `HTML` / `MP4` / `AVI` / `DOCX` / `PDF` / `EPUB` / `MOBI` / `BACKFLOW` 等（值不限于此列表） |
 | `tags.category` | 是 | 单选，仅限：`数据提取` / `数据抽样` / `数据转换` / `数据过滤` / `数据去重` / `数据打标` / `其他` |
 | `tags.modal` | 是 | 数组，仅限：`TEXT` / `IMAGE` / `VIDEO` / `AUDIO` / `OTHER` |
 | `tags.custom` | 否 | 自定义标签数组；每项 ≤32 字符 |

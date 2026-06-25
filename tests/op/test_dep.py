@@ -17,7 +17,7 @@ def _setup_op(tmp_path, cpu_arch=("ARM",)):
     (tmp_path / "program_package" / "dependency" / "requirements.txt").write_text("", encoding="utf-8")
     m = Manifest(
         id="my_op", name="x", description="", author="", version="0.0.1",
-        category="数据转换", modal=["IMAGE"], format=[], language=["zh"],
+        category="数据转换", modal=["IMAGE"], format=["JSONL"], language=["zh"],
         cpu_arch=list(cpu_arch), resources=[Resource(cpu=1, memory=2048, npu=0)],
         auto_data_loading=False, arguments=[],
     )

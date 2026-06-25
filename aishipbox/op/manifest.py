@@ -76,6 +76,8 @@ class Manifest:
                 errs.append(f"非法 modal：{m}")
         if self.category not in VALID_CATEGORIES:
             errs.append(f"非法 category：{self.category}")
+        if not self.format:
+            errs.append("format 不能为空（tags.format 必填）")
         for a in self.cpu_arch:
             if a not in VALID_CPU_ARCHES:
                 errs.append(f"非法 cpu-arch：{a}（仅支持 ARM / X86）")

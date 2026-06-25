@@ -30,7 +30,7 @@ def _default_fields(name: str) -> Dict[str, Any]:
         "version": "0.0.1",
         "category": "其他",
         "modal": ["OTHER"],
-        "format": [],
+        "format": ["OTHER"],
         "language": ["zh"],
         "cpu_arch": ["ARM"],
         "cpu": 1,
