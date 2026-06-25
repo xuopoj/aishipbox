@@ -87,6 +87,22 @@ def provision_venv(project_dir: Path, python_version: str,
     return venv_dir
 
 
+def _module_available(project_dir: Path, module: str) -> bool:
+    py = python_executable(project_dir)
+    result = subprocess.run([str(py), "-c", f"import {module}"], capture_output=True)
+    return result.returncode == 0
+
+
+def ensure_package(project_dir: Path, module: str, pip_spec: str, note: str = "") -> None:
+    """Install pip_spec into the project venv if `module` isn't importable there.
+    Prints `note` once, only when an install is actually needed."""
+    if _module_available(project_dir, module):
+        return
+    if note:
+        print(note)
+    pip_install(project_dir, pip_spec)
+
+
 def pip_install(project_dir: Path, *packages: str) -> None:
     uv = require_uv()
     returncode, _ = _run_uv(

@@ -10,7 +10,7 @@ from typing import Any, Dict
 
 from aishipbox.core import strings
 from aishipbox.core.env import load_env_file
-from aishipbox.core.venv import python_executable, VenvError
+from aishipbox.core.venv import python_executable, ensure_package, VenvError
 from aishipbox.op.manifest import Manifest, ManifestError, load_manifest
 
 
@@ -59,6 +59,12 @@ def execute(path: str, obs: bool, debug: bool, debug_port: int = 5678) -> int:
 
     cmd = [str(py)]
     if debug:
+        try:
+            ensure_package(project, "debugpy", "debugpy>=1.8.0",
+                           note=strings.DEBUGPY_INSTALLING)
+        except VenvError:
+            print(strings.DEBUGPY_INSTALL_FAILED)
+            return 1
         cmd += ["-m", "debugpy", "--listen", f"127.0.0.1:{debug_port}", "--wait-for-client"]
         print(f"调试模式：等待 VS Code 在端口 {debug_port} 附加...")
     cmd += [

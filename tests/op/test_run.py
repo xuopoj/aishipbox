@@ -66,6 +66,42 @@ def test_run_passes_auto_data_loading_true(tmp_path, monkeypatch):
     assert captured["cmd"][idx + 1] == "true"
 
 
+def test_run_debug_ensures_debugpy_in_project_venv(tmp_path, monkeypatch):
+    project = _setup_op_project(tmp_path)
+    ensured = []
+    monkeypatch.setattr(
+        "aishipbox.op.commands.run.ensure_package",
+        lambda project_dir, mod, spec, note="": ensured.append((mod, spec)),
+    )
+    captured = {}
+
+    def fake_run(cmd, env, cwd):
+        captured["cmd"] = cmd
+        class R: returncode = 0
+        return R()
+    monkeypatch.setattr("aishipbox.op.commands.run.subprocess.run", fake_run)
+
+    rc = run_cmd.execute(str(project), obs=False, debug=True)
+    assert rc == 0
+    assert ensured == [("debugpy", "debugpy>=1.8.0")]      # installed before launch
+    assert "-m" in captured["cmd"] and "debugpy" in captured["cmd"]
+
+
+def test_run_no_debug_does_not_touch_debugpy(tmp_path, monkeypatch):
+    project = _setup_op_project(tmp_path)
+    ensured = []
+    monkeypatch.setattr(
+        "aishipbox.op.commands.run.ensure_package",
+        lambda project_dir, mod, spec, note="": ensured.append((mod, spec)),
+    )
+    monkeypatch.setattr("aishipbox.op.commands.run.subprocess.run",
+                        lambda cmd, env, cwd: type("R", (), {"returncode": 0})())
+
+    rc = run_cmd.execute(str(project), obs=False, debug=False)
+    assert rc == 0
+    assert ensured == []           # non-debug run never installs debugpy
+
+
 def test_run_obs_missing_creds_fails(tmp_path):
     project = _setup_op_project(tmp_path)
     rc = run_cmd.execute(str(project), obs=True, debug=False)

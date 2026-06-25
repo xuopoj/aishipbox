@@ -11,6 +11,8 @@ VENV_DOWNLOAD_TLS_FAILED = (
     "  4. 实在不行可加 --insecure 跳过证书校验（不安全，有中间人风险，仅在可信网络下使用）。"
 )
 VENV_INSECURE_WARNING = "⚠️  已启用 --insecure：跳过 TLS 证书校验下载解释器，存在中间人风险，请仅在可信网络下使用。"
+DEBUGPY_INSTALLING = "调试依赖 debugpy 未安装，正在装入项目 .venv ..."
+DEBUGPY_INSTALL_FAILED = "安装 debugpy 失败，无法进入调试模式（详见上方 uv 输出）。"
 VENV_PROVISION_FAILED = "创建项目虚拟环境失败，已清理目录 {path}。\n{detail}"
 PROJECT_NOT_FOUND = "当前目录不是 aishipbox 项目（找不到 .aishipbox.toml）。请先运行 `aishipbox <op|algo> new`。"
 PROJECT_TYPE_MISMATCH = "项目类型不匹配：检测到 {detected}，但当前命令需要 {expected}。"

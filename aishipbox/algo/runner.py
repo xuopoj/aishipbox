@@ -65,16 +65,13 @@ def main():
     service_name = service_dir.name
 
     if debug:
-        try:
-            import debugpy
-            debugpy.listen(("0.0.0.0", debug_port))
-            logger.info(f"Debugger listening on port {debug_port}")
-            logger.info("Waiting for VS Code to attach (press F5)...")
-            debugpy.wait_for_client()
-            logger.info("Debugger attached")
-        except ImportError:
-            logger.error("debugpy not installed. Install it with: pip install debugpy")
-            return 1
+        # debugpy is ensured in the project venv by `algo run --debug` before launch.
+        import debugpy
+        debugpy.listen(("0.0.0.0", debug_port))
+        logger.info(f"Debugger listening on port {debug_port}")
+        logger.info("Waiting for VS Code to attach (press F5)...")
+        debugpy.wait_for_client()
+        logger.info("Debugger attached")
 
     # Inject ProcessBase stub into rest.process_base
     import types

@@ -82,6 +82,25 @@ def test_provision_calls_uv(monkeypatch, tmp_path):
     assert calls[0][:5] == ["/usr/bin/uv", "venv", "--python", "3.10", str(tmp_path / ".venv")]
 
 
+def test_ensure_package_installs_when_missing(monkeypatch, tmp_path):
+    installed = []
+    # module not importable in the project venv -> install it
+    monkeypatch.setattr(venv_mod, "_module_available", lambda project_dir, mod: False)
+    monkeypatch.setattr(venv_mod, "pip_install", lambda project_dir, *pkgs: installed.extend(pkgs))
+
+    venv_mod.ensure_package(tmp_path, "debugpy", "debugpy>=1.8.0")
+    assert installed == ["debugpy>=1.8.0"]
+
+
+def test_ensure_package_skips_when_present(monkeypatch, tmp_path):
+    installed = []
+    monkeypatch.setattr(venv_mod, "_module_available", lambda project_dir, mod: True)
+    monkeypatch.setattr(venv_mod, "pip_install", lambda project_dir, *pkgs: installed.extend(pkgs))
+
+    venv_mod.ensure_package(tmp_path, "debugpy", "debugpy>=1.8.0")
+    assert installed == []          # already there, no install
+
+
 def test_run_uv_streams_and_captures_stderr(monkeypatch, capsys):
     # _run_uv tees uv's stderr: each line goes live to our stderr AND is captured.
     class FakeProc:

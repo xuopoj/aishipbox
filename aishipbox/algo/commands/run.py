@@ -6,8 +6,9 @@ import os
 import subprocess
 from pathlib import Path
 
+from aishipbox.core import strings
 from aishipbox.core.env import load_env_file
-from aishipbox.core.venv import python_executable, VenvError
+from aishipbox.core.venv import python_executable, ensure_package, VenvError
 
 
 def execute(path: str, host: str, port: int, debug: bool, debug_port: int) -> int:
@@ -22,6 +23,14 @@ def execute(path: str, host: str, port: int, debug: bool, debug_port: int) -> in
     except VenvError as e:
         print(str(e))
         return 1
+
+    if debug:
+        try:
+            ensure_package(service_dir, "debugpy", "debugpy>=1.8.0",
+                           note=strings.DEBUGPY_INSTALLING)
+        except VenvError:
+            print(strings.DEBUGPY_INSTALL_FAILED)
+            return 1
 
     env = os.environ.copy()
     env.update(load_env_file(service_dir / ".env"))
