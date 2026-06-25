@@ -30,8 +30,8 @@ uv tool install --reinstall .                # 从当前源码（dev）
 ```
 aishipbox/cli.py     # 仅做分发
 ├── core/            # 共用基础设施
-├── algo/            # JAC 算法服务（HTTP/gRPC 微服务），Python 3.9
-└── op/              # PanguLM 自定义算子（数据集流水线节点），Python 3.10
+├── algo/            # 算法包服务（HTTP/gRPC 微服务），Python 3.9
+└── op/              # 自定义数据加工算子（数据集流水线节点），Python 3.10
 ```
 
 `algo` 与 `op` **互不依赖**；公共逻辑都在 `core/`。

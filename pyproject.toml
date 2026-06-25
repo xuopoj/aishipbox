@@ -1,7 +1,7 @@
 [project]
 name = "aishipbox"
 version = "0.1.0"
-description = "JAC PanguLM 算法服务与自定义算子开发 CLI"
+description = "ModelArts Studio 自定义数据加工算子开发 CLI"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

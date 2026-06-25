@@ -7,7 +7,7 @@ from typing import List
 
 
 def dispatch(argv: List[str]) -> int:
-    parser = argparse.ArgumentParser(prog="aishipbox algo", description="MAS 算法服务项目管理")
+    parser = argparse.ArgumentParser(prog="aishipbox algo", description="算法包服务项目管理")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_new = sub.add_parser("new", help="新建算法服务项目")

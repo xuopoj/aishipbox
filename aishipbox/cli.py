@@ -38,7 +38,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 def _print_usage(file=None) -> None:
     print(
-        "aishipbox - JAC PanguLM 算法服务与自定义算子开发 CLI\n\n"
+        "aishipbox - ModelArts Studio 自定义数据加工算子开发 CLI\n\n"
         "用法：\n"
         "  aishipbox algo <命令> [参数...]     管理算法服务项目\n"
         "  aishipbox op   <命令> [参数...]     管理自定义算子项目\n"
