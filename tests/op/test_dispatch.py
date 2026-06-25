@@ -13,6 +13,18 @@ def test_op_help_lists_all_subcommands(capsys):
         assert cmd in out
 
 
+def test_op_help_describes_workflow(capsys):
+    # Top-level help carries a workflow walkthrough so an agent grasps the
+    # new -> implement -> run -> pack sequence without reading per-cmd help.
+    out = _help_text(["--help"], capsys)
+    assert "工作流" in out
+    # within the workflow section, the numbered steps appear in order
+    wf = out[out.index("工作流"):]
+    assert wf.index("1. new") < wf.index("3. run") < wf.index("5. pack")
+    assert "process.py" in wf           # the "implement" step is called out
+    assert "AGENTS.md" in out           # points at the per-project guide
+
+
 def test_op_new_help_documents_flags_and_defaults(capsys):
     out = _help_text(["new", "--help"], capsys)
     # key flags carry human-readable descriptions

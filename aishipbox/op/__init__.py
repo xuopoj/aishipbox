@@ -11,7 +11,22 @@ def _str2bool(v: str) -> bool:
 
 
 def dispatch(argv: List[str]) -> int:
-    parser = argparse.ArgumentParser(prog="aishipbox op", description="自定义算子项目管理")
+    parser = argparse.ArgumentParser(
+        prog="aishipbox op",
+        description="自定义算子项目管理",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "典型工作流：\n"
+            "  1. new       新建项目（脚手架 + venv + 平台预置包）\n"
+            "  2. 实现       编辑 program_package/process.py（先看项目内 AGENTS.md）\n"
+            "  3. run        本地 mock 运行，结果写到 obs_output/\n"
+            "  4. download   按需补充平台没有的依赖 wheel\n"
+            "  5. pack       校验并打包成 program_package/<id>.tar，上传平台\n"
+            "\n"
+            "每条命令的完整参数与默认值见 `aishipbox op <命令> --help`；\n"
+            "项目级字段规范与约束见项目自带的 AGENTS.md。"
+        ),
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_new = sub.add_parser(
