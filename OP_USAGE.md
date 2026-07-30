@@ -294,7 +294,7 @@ aishipbox op pack -o out.tar      # 指定输出路径
 
 ## 4. 用 coding agent 配合 aishipbox 快速构建
 
-aishipbox 也考虑和 coding agent（Claude Code 等）协作设计：命令非交互友好（`--yes` 永不卡住），每个项目自带 `AGENTS.md` 作为 agent 的项目内操作手册（含完整 manifest 字段规范与约束）。
+aishipbox 也考虑和 coding agent（Claude Code 等）协作设计，每个项目自带 `AGENTS.md` 作为 agent 的项目内操作手册（含完整 manifest 字段规范与约束）。
 
 ### 4.1 分工：人起项目，agent 实现
 
